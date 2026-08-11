@@ -11,10 +11,16 @@
 #      the new one has not even started — a success that says nothing about what
 #      was just pushed.
 #
-#   2. **A push to a branch with an open PR fires two runs**, and the workflow's
-#      concurrency group deliberately cancels one. A `cancelled` conclusion is
-#      therefore normal and must not be read as a failure — but it is not a pass
-#      either, so the verdict has to come from the run that actually finished.
+#   2. **A `cancelled` run is not a failure, and not a pass either.** CI no
+#      longer fires twice for one commit — that duplicate was removed because
+#      GitHub counted the cancelled half against the PR — but a run can still
+#      be superseded by a newer push, so the verdict has to come from the run
+#      that actually finished rather than from whatever ran last.
+#
+# Note: CI runs on pull requests and on `main`. Pushing a branch that has no PR
+# yet produces no run at all, and this script will report "nothing conclusive"
+# — that is expected, not a fault. `scripts/ci-local.sh` is the check that
+# covers that window.
 #
 # It also passes the personal account's token per invocation: `gh` defaults to
 # the work account on this machine, and switching the active account would

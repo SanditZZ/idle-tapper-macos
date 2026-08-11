@@ -1,19 +1,30 @@
 name: CI
 
 on:
-  # Every branch, so a plain `git push` is tested even before a PR exists.
+  # `main` only. Running on every branch as well looks like more coverage but
+  # is not: a push to a branch with an open PR fires BOTH events, and the
+  # concurrency group below then cancels one of them. GitHub counts that
+  # cancelled run against the pull request's status rollup, so a perfectly
+  # green PR reports as unstable — and, worse, it makes "require status
+  # checks" unusable as a merge rule, because a cancelled check never passes.
+  #
+  # A branch push with no PR is therefore not built here. That is deliberate:
+  # `scripts/ci-local.sh` runs exactly these checks before you push, and the
+  # moment a PR exists this workflow covers it.
   push:
-    branches: ['**']
-  # Also on pull requests, so contributions from forks are covered — a fork's
-  # push event never reaches this repository.
+    branches: [main]
+
+  # Covers every pull request, including from forks — a fork's push event
+  # never reaches this repository, so this is the only way their work is
+  # tested before merge.
   pull_request:
     branches: [main]
+
   workflow_dispatch:
 
-# A push to a branch that already has an open PR fires both events. Keying the
-# group on the *branch name* in both cases — `head_ref` for pull requests,
-# `ref_name` for pushes — puts them in the same group, so the duplicate run is
-# cancelled instead of burning a second macOS runner.
+# Superseded runs on the same branch are pointless once a newer commit exists.
+# With the duplicate gone, this now only cancels a genuinely stale run — a
+# second push to a PR while the first is still building.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
