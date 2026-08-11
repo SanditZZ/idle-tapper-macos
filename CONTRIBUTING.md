@@ -7,7 +7,7 @@ Thanks for your interest. This document covers how to get set up, the architectu
 ## Getting started
 
 ```bash
-git clone https://github.com/<your-account>/idle-tapper-macos.git
+git clone https://github.com/SanditZZ/idle-tapper-macos.git
 cd idle-tapper-macos
 open IdleTapper.xcodeproj
 ```
