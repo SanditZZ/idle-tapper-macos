@@ -6,6 +6,40 @@ Ordered roughly by expected value, highest first.
 
 ---
 
+## Camera mode — count taps from hand motion
+
+> **Status: not started. The largest item on this list by a wide margin** — treat it as a project rather than a feature, and expect it to touch privacy, permissions, performance and UI all at once.
+
+**What:** An opt-in mode where the Mac's camera watches for a repeated hand gesture — a clap, a snap, a tap in the air — and increments the counter each time it sees one.
+
+**Strictly a mode, never ambient.** The camera opens only after the user explicitly clicks "Camera Mode" in the UI, and closes when they leave it. It must never start on launch, never run in the background, and never be the default. A tap counter that silently watches you is a different and much worse product.
+
+**Why:** It removes the click from the loop entirely — the counter tracks something you are already doing with your hands, rather than something you have to stop and do to the app.
+
+### Considerations
+
+**Permissions and entitlements.** Needs `NSCameraUsageDescription` (as `INFOPLIST_KEY_NSCameraUsageDescription`, since the Info.plist is generated) and the `com.apple.security.device.camera` sandbox entitlement. macOS will show a TCC prompt the first time. Handle refusal and later revocation gracefully — the mode should explain and offer a way to Settings, not fail silently or wedge.
+
+**Detection approach is the main design decision, and video may be the wrong tool.**
+
+- **Vision, `VNDetectHumanHandPoseRequest`** gives 21 hand landmarks per hand. Workable for a clap (two hands converging then separating) and for a deliberate air-tap. **Snapping is genuinely hard to see** — the motion is small, fast, and often self-occluded.
+- **Frame differencing** is far cheaper but cannot distinguish a clap from someone walking past, so it will miscount constantly.
+- **Audio is very likely the better sensor for claps and snaps.** Both have sharp, distinctive transients that are much easier to detect reliably in audio than in video, and a microphone costs a fraction of the power. Worth prototyping the audio version first and treating "camera mode" as the name rather than the mechanism — or offering both.
+
+**False positives are the feature's whole risk.** Every miscount corrupts real history, which is the one thing this app is supposed to protect. Needs a refractory period so one gesture cannot register twice, a confidence threshold, and — importantly — a visible live indication of what the app thinks it is seeing, so a user can tell immediately whether it is working. Consider not writing to the real history at all until the user confirms the session.
+
+**The popover cannot host this.** It is `.transient`, so it dismisses the moment the user clicks or moves away — the exact things a camera mode needs to survive. Camera mode needs its own window, with a preview, a live count, and an unmistakable stop control. That is a real addition to `WindowCoordinator`, not a new tab.
+
+**Performance and battery.** Continuous capture plus per-frame Vision inference is expensive for a menu bar app that otherwise costs nothing. Throttle the analysis frame rate well below the capture rate, stop capture the instant the window closes, and measure the energy impact before shipping. The green camera indicator will be lit the whole time — that is good for trust, but it also makes any leak of this mode into the background immediately visible and embarrassing.
+
+**Data model.** Camera-sourced taps should count as ordinary taps, but it would be worth recording *how* a tap was registered so a miscounted session can be identified later. That is a schema change on `DayRecord` (or a new per-tap entity), so it needs a `SchemaMigrationPlan` — see the idle-game mechanics entry.
+
+**Testing.** Cannot be covered by the existing unit-test approach. The gesture-recognition layer should be structured to take frames or landmark observations as input and return detections, so it can be tested against recorded fixtures rather than a live camera. Keep the capture session itself thin and at the edge, in line with the Actions/Calculations split.
+
+**Open-sourcing implications.** A camera feature changes what the README and SECURITY policy have to say. Both currently state plainly that the app has no network code and collects nothing; that stays true, but "the camera is used, only in this mode, and frames never leave the machine" needs to be stated explicitly and prominently.
+
+---
+
 ## Global tap shortcut
 
 **What:** A system-wide keyboard shortcut that records a tap without opening the popover.
