@@ -12,8 +12,8 @@
 
 ## Checklist
 
-- [ ] `xcodebuild build` succeeds with **no new warnings**
-- [ ] `xcodebuild test` passes
+- [ ] `./scripts/ci-local.sh` passes locally **before** pushing
+- [ ] The GitHub Actions run on this branch is green
 - [ ] New logic has unit tests, and edge cases are covered
 - [ ] Pure logic lives in `Shared/Logic/` and takes no dependency on SwiftData or I/O
 - [ ] No `ModelContext` / `@Model` usage outside `Shared/Persistence/`

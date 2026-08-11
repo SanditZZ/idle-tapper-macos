@@ -14,14 +14,24 @@ open IdleTapper.xcodeproj
 
 There are no dependencies to install and no package manager step. The project signs ad-hoc, so you do **not** need an Apple Developer account to build or run it.
 
-Before you open a pull request:
+## Before you push
+
+Run the CI checks locally. They must pass:
 
 ```bash
-xcodebuild -project IdleTapper.xcodeproj -scheme IdleTapper -configuration Debug build
-xcodebuild -project IdleTapper.xcodeproj -scheme IdleTapper -configuration Debug test
+./scripts/ci-local.sh
 ```
 
-Both must succeed, and the build must stay **warning-free**. If your change introduces a warning you cannot avoid, say so in the pull request and explain why.
+That runs exactly what GitHub Actions runs — the same two `xcodebuild` invocations with the same flags — so a red pipeline is caught before you push rather than after.
+
+```bash
+./scripts/ci-local.sh build   # build only
+./scripts/ci-local.sh test    # tests only
+```
+
+The build must stay **warning-free**; CI treats Swift warnings as errors. If your change introduces a warning you genuinely cannot avoid, say so in the pull request and explain why — do not weaken the check.
+
+If you change the flags in `scripts/ci-local.sh`, change `.github/workflows/ci.yml` to match, and vice versa. If the two drift, "it passed locally" stops meaning anything.
 
 ---
 
