@@ -135,4 +135,24 @@ enum StatsCalculator {
     static func peak(of bars: [DayBar]) -> Int {
         max(bars.map(\.tapCount).max() ?? 0, 0)
     }
+
+    // MARK: - Formatting
+
+    /// A day count with its unit, pluralised — "1 day", "2 days".
+    ///
+    /// Interpolating the count and appending "days" reads as "1 days" on the
+    /// single-day case, which is the case a new user sees first.
+    static func dayCountText(_ days: Int) -> String {
+        "\(days.formatted()) \(abs(days) == 1 ? "day" : "days")"
+    }
+
+    /// Daily average as a whole number, grouped like every other figure shown.
+    ///
+    /// `String(format: "%.0f")` skips the grouping separator, so the average was
+    /// the one statistic rendered "2633" while its neighbours read "2,633".
+    /// Non-finite input degrades to "0" rather than rendering "nan".
+    static func averageText(_ average: Double) -> String {
+        guard average.isFinite, average > 0 else { return "0" }
+        return Int(average.rounded()).formatted()
+    }
 }
