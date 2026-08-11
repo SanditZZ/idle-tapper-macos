@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  # Every branch, so a plain `git push` is tested even before a PR exists.
+  push:
+    branches: ['**']
+  # Also on pull requests, so contributions from forks are covered — a fork's
+  # push event never reaches this repository.
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A push to a branch that already has an open PR fires both events. Keying the
+# group on the *branch name* in both cases — `head_ref` for pull requests,
+# `ref_name` for pushes — puts them in the same group, so the duplicate run is
+# cancelled instead of burning a second macOS runner.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: macos-15
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # Code signing is disabled throughout: the runner has no keychain
+      # identity, and nothing here needs entitlements that require a real one.
+      #
+      # Warnings are treated as errors because CONTRIBUTING requires the build
+      # to stay warning-free. CI that does not enforce a documented rule is
+      # decoration. If a future SDK deprecation makes this impractical, drop
+      # SWIFT_TREAT_WARNINGS_AS_ERRORS rather than quietly ignoring warnings.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project IdleTapper.xcodeproj \
+            -scheme IdleTapper \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            | xcpretty
+
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project IdleTapper.xcodeproj \
+            -scheme IdleTapper \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            -resultBundlePath TestResults.xcresult \
+            | xcpretty
+
+      # Only on failure: the result bundle carries the failing assertions and
+      # is large enough not to be worth keeping for green runs.
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.run_id }}
+          path: TestResults.xcresult
+          retention-days: 7

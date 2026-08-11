@@ -1,0 +1,41 @@
+name: Feature request
+description: Suggest an idea for Idle Tapper
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Idle Tapper is deliberately small and local-only. Suggestions that keep it that way are the easiest to accept.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation you are in, not just the feature you want.
+      placeholder: I tap while reading and have to open the popover every time, which interrupts what I am doing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+      placeholder: A global keyboard shortcut that records a tap without opening the popover.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Anything you tried, or other designs you thought about and rejected.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Does this fit the project's constraints?
+      description: These are not hard blockers, but a feature that breaks one needs a stronger case.
+      options:
+        - label: It works without a network connection or an account
+        - label: It does not require collecting or transmitting user data
+        - label: It keeps the app usable as a menu bar accessory
