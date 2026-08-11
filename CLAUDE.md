@@ -105,6 +105,12 @@ Colors must be appearance-adaptive or translucent — they sit on the popover's 
 
 **Icons are SF Symbols, never emoji.**
 
+**The app icon is generated, not hand-edited.** `scripts/generate-app-icon.swift` renders it from the same symbol the menu bar uses (`StatusItemRenderer.symbolName`), so the two cannot drift. Editing the PNGs in `AppIcon.appiconset` directly is pointless — the next run overwrites them. To change the icon, change the script and re-run:
+
+```bash
+swift scripts/generate-app-icon.swift
+```
+
 ---
 
 ## 5. Testing

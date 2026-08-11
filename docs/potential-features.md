@@ -88,17 +88,20 @@ Ordered roughly by expected value, highest first.
 
 ---
 
-## App icon and menu bar glyph
+## Custom-drawn icon artwork
 
-**What:** A real `AppIcon` set, plus a custom menu bar icon instead of the stock `hand.tap.fill` SF Symbol.
+> **Partly done.** A full icon set now exists, generated from the `hand.tap.fill` SF Symbol by `scripts/generate-app-icon.swift`. What remains is bespoke artwork, if the symbol-derived icon ever stops feeling good enough.
 
-**Why:** `Assets.xcassets/AppIcon.appiconset` is currently an empty placeholder, so the app has no icon in Finder, the Dock (when shown) or System Settings → Login Items. That reads as unfinished, and it matters more once the repo is public.
+**What:** Replace the generated icon with hand-drawn artwork, and optionally a custom menu bar glyph in place of the stock SF Symbol.
+
+**Why:** The current icon is deliberately derived from the menu bar symbol so the two can never drift, which is the right trade while the app is young. A hand-drawn icon could be more distinctive, at the cost of that guarantee.
 
 **Considerations:**
 
-- Needs the full macOS set: 16, 32, 128, 256 and 512 points, each at 1× and 2×.
-- The menu bar glyph must be a **template image** so macOS can invert it for light and dark menu bars and for reduced-transparency mode. Design it as a flat silhouette; anything with internal shading will look wrong when inverted.
-- Keep it legible at 16 points. The current SF Symbol is a reasonable placeholder precisely because it was drawn for that size.
+- Regenerate rather than hand-edit while the symbol-derived icon is in use: `swift scripts/generate-app-icon.swift` rewrites all ten sizes and `Contents.json`. Editing the PNGs directly means the next run silently overwrites the work.
+- Any menu bar glyph must be a **template image** so macOS can invert it for light and dark menu bars and reduced-transparency mode. Draw it as a flat silhouette — internal shading looks wrong inverted.
+- Keep it legible at 16 points. The SF Symbol survives that size because it was drawn for it; bespoke artwork often does not.
+- If the menu bar glyph and the app icon stop coming from the same source, they will eventually diverge. Decide deliberately rather than by accident.
 
 ---
 

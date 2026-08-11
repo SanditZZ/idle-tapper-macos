@@ -28,6 +28,7 @@ Initial version.
 - Debounced writes and a cached daily record so sustained tapping does not hit the disk on every tap
 - Graceful fallback to an in-memory store when the database cannot be opened, with a visible warning that history is not being saved
 - Design system of typography, spacing, radius, motion and semantic color tokens, adaptive to light and dark appearance
+- App icon generated from the same symbol as the menu bar item, so the two cannot drift apart, via a re-runnable script
 - 53 unit tests across day boundaries, statistics, the repository, menu bar rendering, status item placement, and press animation timing
 
 [Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.0...HEAD
