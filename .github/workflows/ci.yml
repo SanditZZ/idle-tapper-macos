@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: macos-15
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # Code signing is disabled in CI: the runner has no keychain identity, and
+      # the app needs no entitlements that require a real one to build.
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project IdleTapper.xcodeproj \
+            -scheme IdleTapper \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project IdleTapper.xcodeproj \
+            -scheme IdleTapper \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
