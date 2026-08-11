@@ -12,25 +12,45 @@ struct SettingsView: View {
     @Bindable var tracker: TapTracker
     @Bindable var settings: AppSettings
     @Bindable var launchAtLogin: LaunchAtLoginService
+    @Bindable var updates: UpdateService
 
     @State private var isConfirmingReset = false
     @State private var exportMessage: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.section) {
-            header
-            generalSection
-            appearanceSection
-            dataSection
-            Spacer(minLength: 0)
+        // The sections scroll; the footer does not. Settings grows a section
+        // every so often, and a fixed-height stack quietly clips the bottom of
+        // itself when it does — which is exactly what happened when Updates
+        // was added. Scrolling makes the window's height a comfort setting
+        // rather than a limit on what can be reached.
+        VStack(spacing: 0) {
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.section) {
+                    header
+                    generalSection
+                    updatesSection
+                    appearanceSection
+                    dataSection
+                }
+                .padding(DesignTokens.Spacing.cardPadding)
+                // Without this the stack hugs its content and the sections
+                // centre themselves in a wide window instead of filling it.
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Divider()
+
             footer
+                .padding(.horizontal, DesignTokens.Spacing.cardPadding)
+                .padding(.vertical, DesignTokens.Spacing.small)
         }
         // The user may have changed this in System Settings since launch.
         .task { launchAtLogin.refresh() }
-        .padding(DesignTokens.Spacing.cardPadding)
         .frame(
-            minWidth: DesignTokens.Layout.settingsWindowSize.width,
-            minHeight: DesignTokens.Layout.settingsWindowSize.height
+            minWidth: DesignTokens.Layout.settingsWindowMinSize.width,
+            idealWidth: DesignTokens.Layout.settingsWindowSize.width,
+            minHeight: DesignTokens.Layout.settingsWindowMinSize.height,
+            idealHeight: DesignTokens.Layout.settingsWindowSize.height
         )
         .confirmationDialog(
             "Delete all tap history?",
@@ -74,6 +94,33 @@ struct SettingsView: View {
                     .foregroundStyle(AppColors.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
+        }
+    }
+
+    private var updatesSection: some View {
+        section("Updates") {
+            Toggle("Check for updates automatically", isOn: $updates.automaticallyChecks)
+                .font(DesignTokens.Typography.body)
+
+            HStack(spacing: DesignTokens.Spacing.small) {
+                Button("Check Now") { updates.checkForUpdates() }
+                    .disabled(!updates.canCheck)
+
+                Text(Self.lastCheckDescription(updates.lastCheckDate))
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+
+            if let summary = updates.lastCheckSummary {
+                Text(summary)
+                    .font(DesignTokens.Typography.caption)
+                    .foregroundStyle(AppColors.textTertiary)
+            }
+
+            Text("Checks the project's release feed for a newer version. Nothing about you or your taps is sent.")
+                .font(DesignTokens.Typography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -198,6 +245,12 @@ struct SettingsView: View {
     }
 
     // MARK: - Helpers
+
+    /// "Never checked" reads better than an empty space where a date should be.
+    private static func lastCheckDescription(_ date: Date?) -> String {
+        guard let date else { return "Never checked" }
+        return "Last checked \(date.formatted(.relative(presentation: .named)))"
+    }
 
     private static var appVersion: String {
         let info = Bundle.main.infoDictionary

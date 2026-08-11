@@ -41,13 +41,19 @@ final class MenuBarController {
 
     // MARK: - Lifecycle
 
-    init(tracker: TapTracker, settings: AppSettings, launchAtLogin: LaunchAtLoginService) {
+    init(
+        tracker: TapTracker,
+        settings: AppSettings,
+        launchAtLogin: LaunchAtLoginService,
+        updates: UpdateService
+    ) {
         self.tracker = tracker
         self.settings = settings
         self.windowCoordinator = WindowCoordinator(
             tracker: tracker,
             settings: settings,
-            launchAtLogin: launchAtLogin
+            launchAtLogin: launchAtLogin,
+            updates: updates
         )
     }
 

@@ -20,7 +20,8 @@ struct IdleTapperApp: App {
             SettingsView(
                 tracker: AppEnvironment.shared.tracker,
                 settings: AppEnvironment.shared.settings,
-                launchAtLogin: AppEnvironment.shared.launchAtLogin
+                launchAtLogin: AppEnvironment.shared.launchAtLogin,
+                updates: AppEnvironment.shared.updates
             )
         }
     }
