@@ -12,7 +12,7 @@ cd idle-tapper-macos
 open IdleTapper.xcodeproj
 ```
 
-There are no dependencies to install and no package manager step. The project signs ad-hoc, so you do **not** need an Apple Developer account to build or run it.
+There is nothing to install by hand: Swift Package Manager resolves the one dependency, [Sparkle](https://sparkle-project.org), on the first build. The project signs ad-hoc, so you do **not** need an Apple Developer account to build or run it.
 
 ## Before you push
 

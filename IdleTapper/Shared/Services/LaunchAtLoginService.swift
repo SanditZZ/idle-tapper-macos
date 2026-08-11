@@ -55,11 +55,35 @@ final class LaunchAtLoginService {
         )
     }
 
+    /// Turn launch at login on the first time the app ever runs.
+    ///
+    /// The app ships with this on, but "on by default" cannot mean forcing it:
+    /// the system owns the setting and the user may switch it off in System
+    /// Settings. A one-shot flag in defaults means the default is applied once
+    /// and never re-applied over a deliberate choice.
+    ///
+    /// Failures are swallowed on purpose. The common one is running from a
+    /// build folder, where macOS refuses to register a login item — the user
+    /// did not ask for this and should not be shown an error about it.
+    func applyFirstRunDefault(defaults: UserDefaults = .standard) {
+        let key = "hasAppliedLaunchAtLoginDefault"
+        guard !defaults.bool(forKey: key) else { return }
+        defaults.set(true, forKey: key)
+
+        guard Self.currentStatus != .enabled else { return }
+
+        AppLog.settings.info("[Settings] Enabling launch at login for the first run")
+        setEnabled(true, surfacingErrors: false)
+    }
+
     /// Register or unregister the app as a login item.
     ///
     /// Never throws: a failure leaves the toggle reflecting reality and puts a
     /// message on screen rather than interrupting the user.
-    func setEnabled(_ enabled: Bool) {
+    ///
+    /// - Parameter surfacingErrors: When false, a failure is logged but not
+    ///   shown. Used for the first-run default, which the user did not ask for.
+    func setEnabled(_ enabled: Bool, surfacingErrors: Bool = true) {
         do {
             if enabled {
                 try SMAppService.mainApp.register()
@@ -71,7 +95,9 @@ final class LaunchAtLoginService {
             lastErrorMessage = nil
             isUnavailable = false
         } catch {
-            lastErrorMessage = Self.describe(error, whileEnabling: enabled)
+            if surfacingErrors {
+                lastErrorMessage = Self.describe(error, whileEnabling: enabled)
+            }
             isUnavailable = true
             AppLog.settings.error(
                 "[Settings] Launch at login change failed: \(error.localizedDescription, privacy: .public)"

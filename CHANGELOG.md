@@ -21,15 +21,18 @@ Initial version.
 - History window with a configurable range of 7, 30, 90 or 365 days, a bar chart, per-day list, and summary statistics including longest streak and daily average
 - Settings window covering menu bar display style, history range, tap sound, and confirmation before deletion
 - History export to portable JSON
-- Launch at login, backed by the system login items API, reflecting the real system state rather than a cached preference
+- Automatic updates via Sparkle: a daily check, a one-click install, and a Settings section with a manual check and a switch to turn automatic checking off
+- Update archives verified by an EdDSA signature rather than by Apple notarization, so an update that was not published by this project is refused
+- Launch at login, backed by the system login items API, reflecting the real system state rather than a cached preference, and enabled by default on first run
 - Detection of a status item placed behind the display notch, with an alert explaining the cause and offering the more compact icon-only style, plus a way to re-enable the warning after dismissing it
 - Delete-all-history action with confirmation
-- Local persistence via SwiftData, behind a `TapRepository` protocol
+- Local persistence via SwiftData, behind a `TapRepository` protocol, stored in a directory the app owns rather than a generic filename in shared Application Support
+- One-time carry-over of the database left behind by earlier sandboxed builds, copied rather than moved so the original stays intact
 - Debounced writes and a cached daily record so sustained tapping does not hit the disk on every tap
 - Graceful fallback to an in-memory store when the database cannot be opened, with a visible warning that history is not being saved
 - Design system of typography, spacing, radius, motion and semantic color tokens, adaptive to light and dark appearance
 - App icon generated from the same symbol as the menu bar item, so the two cannot drift apart, via a re-runnable script
-- 53 unit tests across day boundaries, statistics, the repository, menu bar rendering, status item placement, and press animation timing
+- 64 unit tests across day boundaries, statistics, the repository, menu bar rendering, status item placement, press animation timing, and store migration
 
 [Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/SanditZZ/idle-tapper-macos/releases/tag/v0.1.0

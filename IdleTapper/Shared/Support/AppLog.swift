@@ -29,4 +29,7 @@ enum AppLog {
 
     /// User settings and preferences.
     static let settings = Logger(subsystem: subsystem, category: "Settings")
+
+    /// Sparkle update checks, downloads and installs.
+    static let updates = Logger(subsystem: subsystem, category: "Updates")
 }

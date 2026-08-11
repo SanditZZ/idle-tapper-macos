@@ -16,14 +16,21 @@ final class WindowCoordinator {
     private let tracker: TapTracker
     private let settings: AppSettings
     private let launchAtLogin: LaunchAtLoginService
+    private let updates: UpdateService
 
     private var historyWindow: NSWindow?
     private var settingsWindow: NSWindow?
 
-    init(tracker: TapTracker, settings: AppSettings, launchAtLogin: LaunchAtLoginService) {
+    init(
+        tracker: TapTracker,
+        settings: AppSettings,
+        launchAtLogin: LaunchAtLoginService,
+        updates: UpdateService
+    ) {
         self.tracker = tracker
         self.settings = settings
         self.launchAtLogin = launchAtLogin
+        self.updates = updates
     }
 
     // MARK: - Actions
@@ -40,6 +47,7 @@ final class WindowCoordinator {
         let window = makeWindow(
             title: "Tap History",
             size: DesignTokens.Layout.historyWindowSize,
+            minSize: DesignTokens.Layout.historyWindowMinSize,
             content: HistoryView(tracker: tracker, settings: settings)
         )
         historyWindow = window
@@ -58,10 +66,12 @@ final class WindowCoordinator {
         let window = makeWindow(
             title: "Idle Tapper Settings",
             size: DesignTokens.Layout.settingsWindowSize,
+            minSize: DesignTokens.Layout.settingsWindowMinSize,
             content: SettingsView(
                 tracker: tracker,
                 settings: settings,
-                launchAtLogin: launchAtLogin
+                launchAtLogin: launchAtLogin,
+                updates: updates
             )
         )
         settingsWindow = window
@@ -75,6 +85,7 @@ final class WindowCoordinator {
     private func makeWindow(
         title: String,
         size: CGSize,
+        minSize: CGSize,
         content: some View
     ) -> NSWindow {
         let window = NSWindow(
@@ -87,7 +98,21 @@ final class WindowCoordinator {
         window.contentViewController = NSHostingController(rootView: content)
         window.isReleasedWhenClosed = false
         window.center()
-        window.setFrameAutosaveName("IdleTapper.\(title)")
+
+        // Set the floor *before* the autosaved frame is restored, so a frame
+        // saved by an older build — one whose window was sized for less
+        // content — is clamped up instead of reopening clipped. Restoring a
+        // stale, too-small frame is how a window that grew a section starts
+        // hiding the bottom of itself on every launch afterwards.
+        window.contentMinSize = minSize
+
+        // The trailing number discards previously saved frames. Bump it when a
+        // window's content grows enough that the old remembered size is no
+        // longer a sensible place to reopen at — clamping to the minimum would
+        // technically work, but it reopens the window scrolled and cramped
+        // rather than at the size the layout was designed around.
+        window.setFrameAutosaveName("IdleTapper.\(title).2")
+
         return window
     }
 

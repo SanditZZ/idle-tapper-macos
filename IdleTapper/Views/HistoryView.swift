@@ -25,9 +25,14 @@ struct HistoryView: View {
             list
         }
         .padding(DesignTokens.Spacing.cardPadding)
+        // The day list scrolls on its own, so the window only needs a floor
+        // that keeps the chart and the list both usable — not a floor equal to
+        // the size it opens at, which is what stopped it being resized at all.
         .frame(
-            minWidth: DesignTokens.Layout.historyWindowSize.width,
-            minHeight: DesignTokens.Layout.historyWindowSize.height
+            minWidth: DesignTokens.Layout.historyWindowMinSize.width,
+            idealWidth: DesignTokens.Layout.historyWindowSize.width,
+            minHeight: DesignTokens.Layout.historyWindowMinSize.height,
+            idealHeight: DesignTokens.Layout.historyWindowSize.height
         )
         .task { reload() }
         .onChange(of: settings.historyRangeDays) { _, _ in reload() }

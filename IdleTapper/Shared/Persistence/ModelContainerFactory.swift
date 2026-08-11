@@ -19,18 +19,36 @@ enum ModelContainerFactory {
 
     /// Container backed by the on-disk SQLite store in Application Support.
     ///
+    /// The location is named explicitly (see `StoreLocations`) rather than left
+    /// to SwiftData's default, and the store left behind by the sandboxed
+    /// builds is brought across on the first launch that finds one.
+    ///
     /// - Parameter url: Optional explicit store location, used by tests and by
-    ///   anyone running multiple instances side by side.
+    ///   anyone running multiple instances side by side. Supplying one skips
+    ///   the migration, since it is only meaningful for the app's own store.
     static func makePersistent(at url: URL? = nil) throws -> ModelContainer {
-        let configuration: ModelConfiguration = if let url {
-            ModelConfiguration(schema: schema, url: url)
+        let storeURL: URL
+        if let url {
+            storeURL = url
         } else {
-            ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+            StoreMigrator.migrateIfNeeded()
+            storeURL = StoreLocations.storeURL
         }
+
+        // SwiftData will not create intermediate directories for a store URL it
+        // was handed, and the app owns a subdirectory that may not exist yet.
+        try FileManager.default.createDirectory(
+            at: storeURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+
+        let configuration = ModelConfiguration(schema: schema, url: storeURL)
 
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
-            AppLog.persistence.info("[Persistence] Opened persistent store")
+            AppLog.persistence.info(
+                "[Persistence] Opened persistent store at \(storeURL.path, privacy: .public)"
+            )
             return container
         } catch {
             AppLog.persistence.error(

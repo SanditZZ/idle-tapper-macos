@@ -21,6 +21,7 @@ final class AppEnvironment {
     let settings: AppSettings
     let tracker: TapTracker
     let launchAtLogin: LaunchAtLoginService
+    let updates: UpdateService
 
     /// True when the on-disk store could not be opened and history is being
     /// held in memory only. Surfaced in the UI rather than failing silently.
@@ -53,11 +54,15 @@ final class AppEnvironment {
 
         self.isEphemeral = ephemeral
         self.launchAtLogin = LaunchAtLoginService()
+        self.updates = UpdateService.shared
         self.tracker = TapTracker(
             repository: SwiftDataTapRepository(container: container),
             settings: settings,
             isEphemeral: ephemeral
         )
+
+        // Ships on; applied once so it never overrides a later opt-out.
+        self.launchAtLogin.applyFirstRunDefault()
 
         AppLog.app.info("[App] Environment ready (ephemeral: \(ephemeral, privacy: .public))")
     }

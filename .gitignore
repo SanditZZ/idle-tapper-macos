@@ -54,8 +54,18 @@ playground.xcworkspace
 .swiftpm/
 Packages/
 Package.pins
-Package.resolved
-*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# Package.resolved IS committed. This is an application, not a library: the
+# exact Sparkle revision that was built and tested is the one CI should build,
+# and Sparkle is the component allowed to install code on users' machines.
+# Letting it float to whatever is newest at build time would mean shipping a
+# dependency nobody here has looked at.
+#
+# The directory's other contents (caches, state) stay ignored. Note the
+# trailing `*`: excluding the directory itself would make the negation below
+# impossible, since git cannot re-include a file under an excluded directory.
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/*
+!*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # ---------------------------------------------------------------------------
 # Dependency managers (not used today, ignored defensively)

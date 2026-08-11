@@ -1,0 +1,315 @@
+name: Release
+
+# Releases are cut when the version changes, not on every push.
+#
+# On a push to main the workflow reads MARKETING_VERSION from the project and
+# checks whether a matching tag already exists. If it does, nothing happens —
+# so ordinary commits, README edits and refactors do not produce releases. Bump
+# the version, merge, and the release builds itself.
+#
+# This keeps the "automatic" feel without turning every commit into a version
+# nobody asked for.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Release even if a tag for this version already exists (replaces it)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+        with:
+          # Tags are needed to decide whether this version was already released.
+          fetch-depth: 0
+
+      # ---------------------------------------------------------------------
+      # Decide whether there is anything to do
+      # ---------------------------------------------------------------------
+
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+
+          # Read from the resolved build settings rather than grepping the
+          # pbxproj, so inherited or overridden values are honoured.
+          VERSION="$(xcodebuild -project IdleTapper.xcodeproj -target IdleTapper \
+            -configuration Release -showBuildSettings 2>/dev/null \
+            | awk -F' = ' '/ MARKETING_VERSION =/ {print $2; exit}' | tr -d '[:space:]')"
+
+          BUILD="$(xcodebuild -project IdleTapper.xcodeproj -target IdleTapper \
+            -configuration Release -showBuildSettings 2>/dev/null \
+            | awk -F' = ' '/ CURRENT_PROJECT_VERSION =/ {print $2; exit}' | tr -d '[:space:]')"
+
+          if [ -z "${VERSION}" ]; then
+            echo "::error::Could not read MARKETING_VERSION from the project"
+            exit 1
+          fi
+
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "build=${BUILD}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+          if git rev-parse "refs/tags/${TAG}" >/dev/null 2>&1 \
+             && [ "${{ inputs.force }}" != "true" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${TAG} already exists — nothing to release. Bump MARKETING_VERSION to cut a new one."
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Releasing ${TAG} (build ${BUILD})"
+          fi
+
+      # ---------------------------------------------------------------------
+      # Build
+      #
+      # Signing is conditional. With no certificate in secrets the app is
+      # ad-hoc signed, which works but leaves it unnotarized — users must clear
+      # the quarantine flag on first run (documented in the README and in the
+      # release notes). Adding the secrets later switches the signed and
+      # notarized path on with no change to this file.
+      # ---------------------------------------------------------------------
+
+      - name: Determine signing mode
+        if: steps.version.outputs.should_release == 'true'
+        id: signing
+        env:
+          CERTIFICATE: ${{ secrets.DEVELOPER_CERTIFICATE_BASE64 }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          if [ -n "${CERTIFICATE}" ] && [ -n "${APPLE_ID}" ]; then
+            echo "mode=developer-id" >> "$GITHUB_OUTPUT"
+            echo "::notice::Developer ID certificate found — the release will be signed and notarized"
+          else
+            echo "mode=adhoc" >> "$GITHUB_OUTPUT"
+            echo "::warning::No Developer ID certificate configured — shipping an ad-hoc signed, UNNOTARIZED build. Users will have to bypass Gatekeeper on first launch. See RELEASING.md."
+          fi
+
+      - name: Import signing certificate
+        if: steps.version.outputs.should_release == 'true' && steps.signing.outputs.mode == 'developer-id'
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/release.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/productsign
+          rm -f certificate.p12
+
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+            | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.+)"/\1/')"
+
+          if [ -z "${IDENTITY}" ]; then
+            echo "::error::No Developer ID Application certificate in the imported keychain"
+            exit 1
+          fi
+          echo "SIGNING_IDENTITY=${IDENTITY}" >> "$GITHUB_ENV"
+
+      - name: Build (Release)
+        if: steps.version.outputs.should_release == 'true'
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project IdleTapper.xcodeproj \
+            -scheme IdleTapper \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            | xcpretty
+
+      - name: Sign
+        if: steps.version.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release/IdleTapper.app"
+
+          if [ "${{ steps.signing.outputs.mode }}" = "developer-id" ]; then
+            codesign --force --deep --options runtime --timestamp \
+              --entitlements IdleTapper/IdleTapper.entitlements \
+              --sign "${SIGNING_IDENTITY}" "$APP"
+          else
+            # Ad-hoc: the bundle still needs a valid signature for the sandbox
+            # entitlement to apply and for the app to launch at all.
+            codesign --force --deep \
+              --entitlements IdleTapper/IdleTapper.entitlements \
+              --sign - "$APP"
+          fi
+
+          codesign --verify --deep --strict --verbose=2 "$APP"
+
+      - name: Notarize and staple
+        if: steps.version.outputs.should_release == 'true' && steps.signing.outputs.mode == 'developer-id'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release/IdleTapper.app"
+
+          # Notarization takes a zip, but the ticket is stapled to the .app so
+          # it validates offline afterwards.
+          ditto -c -k --keepParent "$APP" notarization.zip
+          xcrun notarytool submit notarization.zip \
+            --apple-id "$APPLE_ID" --password "$APPLE_ID_PASSWORD" --team-id "$TEAM_ID" \
+            --wait --timeout 30m
+          xcrun stapler staple "$APP"
+          xcrun stapler validate "$APP"
+          rm -f notarization.zip
+
+      # ---------------------------------------------------------------------
+      # Package
+      # ---------------------------------------------------------------------
+
+      - name: Package zip and DMG
+        if: steps.version.outputs.should_release == 'true'
+        id: package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          APP="build/Build/Products/Release/IdleTapper.app"
+          mkdir -p dist staging
+
+          # `ditto`, never `zip`: plain zip mangles symlinks and bundle
+          # structure and silently invalidates the code signature.
+          ditto -c -k --keepParent "$APP" "dist/IdleTapper-${VERSION}.zip"
+
+          # DMG: the app beside an Applications symlink, the familiar
+          # drag-to-install layout.
+          cp -pR "$APP" staging/
+          ln -s /Applications staging/Applications
+          hdiutil create \
+            -volname "Idle Tapper" \
+            -srcfolder staging \
+            -ov -format UDZO \
+            "dist/IdleTapper-${VERSION}.dmg"
+          rm -rf staging
+
+          cd dist
+          shasum -a 256 ./*.zip ./*.dmg > "checksums-${VERSION}.txt"
+          cat "checksums-${VERSION}.txt"
+          ls -lh
+
+      # ---------------------------------------------------------------------
+      # Release notes
+      # ---------------------------------------------------------------------
+
+      - name: Build release notes
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MODE: ${{ steps.signing.outputs.mode }}
+        run: |
+          set -euo pipefail
+
+          # Pull this version's section out of the changelog, if present.
+          if awk -v v="## [${VERSION}]" 'index($0, v) == 1 {found=1} END {exit !found}' CHANGELOG.md; then
+            # Stop at the next version heading, and also at the block of link
+            # reference definitions the changelog keeps at the bottom — those
+            # belong to the whole file, not to this version, and dragging them
+            # into the notes puts dead "[0.1.0]: https://…" lines in a release.
+            awk -v v="## [${VERSION}]" '
+              index($0, v) == 1 {capture=1; next}
+              capture && /^## \[/ {exit}
+              capture && /^\[[^]]+\]: / {exit}
+              capture {print}
+            ' CHANGELOG.md > notes-body.md
+          else
+            echo "See the commit history for what changed in this version." > notes-body.md
+          fi
+
+          {
+            echo "## Install"
+            echo
+            echo "Download \`IdleTapper-${VERSION}.dmg\`, open it, and drag **Idle Tapper** to Applications."
+            echo
+
+            if [ "${MODE}" != "developer-id" ]; then
+              echo "> [!IMPORTANT]"
+              echo "> This build is **not notarized by Apple**, so macOS will refuse to open it the first time."
+              echo "> After moving it to Applications, run this once:"
+              echo ">"
+              echo "> \`\`\`bash"
+              echo "> xattr -dr com.apple.quarantine /Applications/IdleTapper.app"
+              echo "> \`\`\`"
+              echo ">"
+              echo "> Alternatively open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**."
+              echo "> On macOS 15 and later, Control-clicking the app no longer works as a bypass."
+              echo
+            fi
+
+            echo "Requires macOS 14 (Sonoma) or later. The app lives in the menu bar and has no Dock icon."
+            echo
+            echo "## What changed"
+            echo
+            cat notes-body.md
+            echo
+            echo "## Verify your download"
+            echo
+            echo "\`\`\`bash"
+            echo "shasum -a 256 -c checksums-${VERSION}.txt"
+            echo "\`\`\`"
+          } > release-notes.md
+
+          cat release-notes.md
+
+      - name: Create release
+        if: steps.version.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # `gh release create` creates the tag at the target commit, so there
+          # is no separate tag push to keep in sync.
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release delete "${TAG}" --yes --cleanup-tag
+          fi
+
+          gh release create "${TAG}" \
+            --title "Idle Tapper ${VERSION}" \
+            --notes-file release-notes.md \
+            --target "${GITHUB_SHA}" \
+            dist/*
+
+          echo "::notice::Published ${TAG}"
+
+      - name: Skipped
+        if: steps.version.outputs.should_release != 'true'
+        run: |
+          echo "::notice::Version ${{ steps.version.outputs.version }} is already released. Bump MARKETING_VERSION in the project to cut a new one."
