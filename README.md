@@ -45,7 +45,7 @@ No third-party dependencies. No package manager step. Clone and build.
 ## Building
 
 ```bash
-git clone https://github.com/<your-account>/idle-tapper-macos.git
+git clone https://github.com/SanditZZ/idle-tapper-macos.git
 cd idle-tapper-macos
 open IdleTapper.xcodeproj
 ```
@@ -166,7 +166,7 @@ IdleTapper/
 │   └── CardModifier.swift         Shared container styling
 └── Shared/
     ├── Models/                    DayRecord (@Model), DaySnapshot, TapStats
-    ├── Logic/                     DayBoundary, StatsCalculator, StatusItemPlacement — pure, no I/O
+    ├── Logic/                     DayBoundary, StatsCalculator, StatusItemPlacement, PressAnimationTiming — pure
     ├── Persistence/               TapRepository protocol + SwiftData implementation
     ├── Services/                  TapTracker (observable state), AppSettings, LaunchAtLoginService
     └── Support/                   AppLog, ObserverBag, EventMonitor
@@ -195,7 +195,7 @@ A tapper generates writes far faster than a normal app, so:
 
 ## Testing
 
-47 tests across 5 suites, using [Swift Testing](https://developer.apple.com/documentation/testing).
+53 tests across 6 suites, using [Swift Testing](https://developer.apple.com/documentation/testing).
 
 ```bash
 xcodebuild -project IdleTapper.xcodeproj -scheme IdleTapper test
