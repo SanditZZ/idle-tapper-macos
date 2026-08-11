@@ -7,6 +7,7 @@
 ![SwiftUI](https://img.shields.io/badge/SwiftUI-blue?style=flat-square&logo=swift)
 ![SwiftData](https://img.shields.io/badge/SwiftData-purple?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+![README hits](https://hits.sh/github.com/SanditZZ/idle-tapper-macos.svg?style=flat-square&label=README%20hits&color=lightgrey)
 
 ---
 
