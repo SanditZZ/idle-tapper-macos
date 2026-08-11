@@ -237,9 +237,14 @@ jobs:
 
           # Pull this version's section out of the changelog, if present.
           if awk -v v="## [${VERSION}]" 'index($0, v) == 1 {found=1} END {exit !found}' CHANGELOG.md; then
+            # Stop at the next version heading, and also at the block of link
+            # reference definitions the changelog keeps at the bottom — those
+            # belong to the whole file, not to this version, and dragging them
+            # into the notes puts dead "[0.1.0]: https://…" lines in a release.
             awk -v v="## [${VERSION}]" '
               index($0, v) == 1 {capture=1; next}
               capture && /^## \[/ {exit}
+              capture && /^\[[^]]+\]: / {exit}
               capture {print}
             ' CHANGELOG.md > notes-body.md
           else

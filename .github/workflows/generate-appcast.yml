@@ -1,0 +1,166 @@
+name: Generate Appcast
+
+# Publishes the Sparkle update feed after a release goes out.
+#
+# The app checks `appcast.xml` on GitHub Pages once a day. This workflow keeps
+# that file current: it takes the zip from a published release, signs it with
+# the EdDSA private key, and commits the regenerated feed to `gh-pages`.
+#
+# ⚠️  This workflow cannot succeed until three things are true:
+#
+#   1. The repository is PUBLIC, or on a plan that allows Pages on private
+#      repositories. GitHub Pages is the only reason the feed has a stable URL.
+#   2. A `gh-pages` branch exists and Pages is serving from it.
+#   3. The `SPARKLE_PRIVATE_KEY` secret is set.
+#
+# Until then it will fail on the checkout step, which is loud but harmless —
+# the release itself is already published by then, and users simply do not get
+# automatic updates yet. RELEASING.md carries the go-live checklist.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to (re)generate the appcast for, e.g. v0.1.0"
+        required: false
+        type: string
+
+concurrency:
+  group: appcast
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  appcast:
+    name: Sign and publish the feed
+    runs-on: macos-15
+    timeout-minutes: 20
+
+    steps:
+      - name: Resolve the release tag
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          elif [ -n "${{ inputs.release_tag }}" ]; then
+            TAG="${{ inputs.release_tag }}"
+          else
+            TAG="$(gh api repos/${{ github.repository }}/releases/latest --jq '.tag_name')"
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "::notice::Generating the appcast for ${TAG}"
+
+      - name: Fail early without a signing key
+        env:
+          KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [ -z "${KEY}" ]; then
+            echo "::error::SPARKLE_PRIVATE_KEY is not set. Updates cannot be signed, and an unsigned appcast would be rejected by every installed copy of the app. See RELEASING.md."
+            exit 1
+          fi
+
+      # The feed and the archives it points at both live on the Pages branch,
+      # so past releases stay available for delta generation.
+      - name: Check out gh-pages
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Fetch the Sparkle tools
+        run: |
+          set -euo pipefail
+          curl -fsSL -o sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          tar -xf sparkle.tar.xz bin/generate_appcast bin/BinaryDelta bin/sign_update
+          chmod +x bin/generate_appcast bin/BinaryDelta bin/sign_update
+        env:
+          # Keep this in step with the Sparkle version in Package.resolved.
+          # The tools and the framework do not have to match, but a signing
+          # tool from a different era than the installed updater is exactly the
+          # kind of drift nobody notices until an update refuses to install.
+          SPARKLE_VERSION: "2.9.5"
+
+      - name: Download the release archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p releases
+
+          # The release workflow names the zip after the version.
+          gh release download "${TAG}" --repo "${{ github.repository }}" \
+            --pattern "IdleTapper-*.zip" --dir releases --clobber
+
+          ARCHIVE="$(ls releases/IdleTapper-*.zip | head -1)"
+          SIZE="$(stat -f%z "${ARCHIVE}")"
+          echo "Downloaded ${ARCHIVE} (${SIZE} bytes)"
+
+          # A truncated download would be signed and published as a valid
+          # update, so refuse anything implausibly small.
+          if [ "${SIZE}" -lt 200000 ]; then
+            echo "::error::${ARCHIVE} is only ${SIZE} bytes — refusing to publish a likely-corrupt update"
+            exit 1
+          fi
+
+      - name: Generate and sign the appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          # The key goes in on stdin. Writing it to a file, even a temporary
+          # one, leaves it on the runner's disk and in any workspace upload.
+          echo "$SPARKLE_PRIVATE_KEY" | ./bin/generate_appcast \
+            --ed-key-file - \
+            --download-url-prefix "https://sanditzz.github.io/idle-tapper-macos/releases/" \
+            --maximum-deltas 5 \
+            --maximum-versions 10 \
+            releases/
+
+          mv releases/appcast.xml ./
+          echo "=== appcast ==="
+          head -40 appcast.xml
+
+      - name: Commit to gh-pages
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add appcast.xml releases/
+          if git diff --staged --quiet; then
+            echo "::notice::Appcast already up to date"
+            exit 0
+          fi
+
+          git commit -m "Updated the appcast for ${TAG}"
+          git push
+
+      - name: Confirm the feed is reachable
+        run: |
+          set -euo pipefail
+          URL="https://sanditzz.github.io/idle-tapper-macos/appcast.xml"
+
+          # Pages takes a moment to redeploy; a miss here is not a failure.
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "$URL" -o /dev/null; then
+              echo "::notice::Feed live at ${URL}"
+              exit 0
+            fi
+            sleep 15
+          done
+
+          echo "::warning::${URL} was not reachable yet. GitHub Pages can take a few minutes; check it manually."
