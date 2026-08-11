@@ -2,6 +2,24 @@
 
 Thanks for your interest. This document covers how to get set up, the architecture rules that keep the codebase coherent, and what a good pull request looks like.
 
+The rules below are specific, and there are a fair number of them. Do not read that as a high bar — they exist so that review is about your idea rather than about house style, and none of them are hard to follow once the project is open in front of you.
+
+---
+
+## Finding something to work on
+
+- **[Good first issues](https://github.com/SanditZZ/idle-tapper-macos/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)** — small, self-contained, and written so the finish line is obvious. Start here if you are new to the codebase.
+- **[All open issues](https://github.com/SanditZZ/idle-tapper-macos/issues)**.
+- **[docs/potential-features.md](docs/potential-features.md)** — the longer-term backlog. Each entry records the constraint that makes it non-trivial, which is usually the interesting part. Open an issue to discuss before building one of these.
+
+**Comment on the issue before you start**, so two people do not quietly build the same thing. Nobody will mind you asking a question that turns out to be obvious.
+
+Something not listed? Open an issue describing the problem before writing the fix. Small bug fixes can go straight to a pull request.
+
+### One thing that will confuse you first
+
+The app has no window and no Dock icon — it is a menu bar item. **On a Mac with a notch and a busy menu bar, macOS can place a new status item behind the camera housing**, where it exists, works, and cannot be seen or clicked. The app detects this and shows an alert, but if the icon seems missing after a build, that is very likely why. Free a menu bar slot and it appears. There is more in the README's troubleshooting section.
+
 ---
 
 ## Getting started
@@ -33,7 +51,9 @@ The build must stay **warning-free**; CI treats Swift warnings as errors. If you
 
 If you change the flags in `scripts/ci-local.sh`, change `.github/workflows/ci.yml` to match, and vice versa. If the two drift, "it passed locally" stops meaning anything.
 
-After pushing, confirm the real run went green — a local pass is strong evidence, not proof, since the runner has a different Xcode and a clean checkout:
+CI runs on pull requests and on `main`, not on every branch push — a push that fired both events produced a duplicate run, one of which was cancelled and then counted against the pull request. So `ci-local.sh` is the only check covering the window before you open a PR, which is exactly why it must pass.
+
+Once the pull request exists, confirm the real run went green — a local pass is strong evidence, not proof, since the runner has a different Xcode and a clean checkout:
 
 ```bash
 ./scripts/ci-watch.sh
