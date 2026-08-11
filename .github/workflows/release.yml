@@ -33,6 +33,12 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
 
+    # Handed to the appcast job below, so the feed is generated for exactly the
+    # release this run produced rather than whatever happens to be latest.
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      should_release: ${{ steps.version.outputs.should_release }}
+
     steps:
       - name: Check out
         uses: actions/checkout@v5
@@ -313,3 +319,23 @@ jobs:
         if: steps.version.outputs.should_release != 'true'
         run: |
           echo "::notice::Version ${{ steps.version.outputs.version }} is already released. Bump MARKETING_VERSION in the project to cut a new one."
+
+  # ---------------------------------------------------------------------
+  # Publish the update feed
+  #
+  # Called explicitly rather than left to the `release: published` event.
+  # A release created by a workflow uses GITHUB_TOKEN, and GitHub will not
+  # start new workflow runs from events that token raises — so the event
+  # never arrives. v0.1.0 shipped with no appcast because of exactly this,
+  # and the failure is invisible: the release looks perfect while no
+  # installed copy is ever told about it.
+  # ---------------------------------------------------------------------
+  appcast:
+    name: Publish the update feed
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
+    uses: ./.github/workflows/generate-appcast.yml
+    with:
+      release_tag: ${{ needs.release.outputs.tag }}
+    # The called workflow needs SPARKLE_PRIVATE_KEY.
+    secrets: inherit
