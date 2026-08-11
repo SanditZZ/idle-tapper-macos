@@ -55,6 +55,39 @@ Ordered roughly by expected value, highest first.
 
 ---
 
+## Milestone visual effects
+
+**What:** A particle burst when the day's count crosses a milestone — every 100 taps by default, with the interval configurable. Plus a **"Show visual effects"** toggle in Settings, **default on**, so anyone who finds it distracting can turn it off.
+
+**Why:** The counter currently gives no sense of occasion. A brief celebration at round numbers is the cheapest way to make a tally feel like a game, and milestones are already the natural rhythm of the thing.
+
+### Considerations
+
+**Milestone detection belongs in the calculation layer.** Something like `MilestoneCalculator.crossed(from:to:interval:)`, taking the previous and new counts and returning the milestone reached, if any. Pure and directly testable — and the edge cases genuinely need tests:
+
+- An increment larger than the interval must not fire several bursts at once, or silently skip the milestone
+- The daily reset takes the count back to zero; crossing 100 the next day is a new milestone, not a repeat
+- Interval changes mid-day must not retroactively fire for counts already passed
+- An interval of zero or a negative number must not divide by zero or loop forever — clamp it, per the project's rule that every default is valid and functional
+
+**Respect Reduce Motion — this is not optional.** A burst of moving particles is precisely what `NSWorkspace.shared.accessibilityDisplayShouldReduceMotion` exists to suppress. When it is on, fall back to something static: a colour pulse, a brief label, no motion. Honour it independently of the user's own toggle, since the two mean different things.
+
+**Rendering approach.** In rough order of preference:
+
+- **SwiftUI `Canvas` + `TimelineView`** — no new framework, stays inside the existing view layer, easy to clip to the popover
+- **`CAEmitterLayer`** via an `NSViewRepresentable` — purpose-built for particles and cheap, at the cost of dropping into AppKit
+- **SpriteKit** — capable but far too much machinery for a 260-point-wide popover
+
+**Performance is the real constraint.** The effect fires during exactly the moment the user is tapping fastest, and the tap path is already debounced for a reason. The animation must never block or delay the increment, and it must not drop frames on an integrated GPU. Cap the particle count, and make sure a second milestone arriving mid-animation replaces the first cleanly rather than stacking emitters.
+
+**The popover is small and transient.** Effects must be clipped to its bounds — no particles spilling outside the window — and must tear down immediately if the popover dismisses mid-burst. Anything that outlives its window is a leak.
+
+**The setting.** A new `showVisualEffects` key in `AppSettings`, defaulting to `true`, alongside the existing preferences. The milestone interval could live there too, though it may be better kept as a constant until there is evidence anyone wants to change it — an option nobody adjusts is just surface area.
+
+**Worth deciding early:** whether the effect belongs only in the popover, or whether the menu bar item should also acknowledge a milestone. A menu bar flash is more visible but much more intrusive, and it competes with the fixed-width guarantee the status item currently maintains.
+
+---
+
 ## App icon and menu bar glyph
 
 **What:** A real `AppIcon` set, plus a custom menu bar icon instead of the stock `hand.tap.fill` SF Symbol.

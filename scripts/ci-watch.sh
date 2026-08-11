@@ -32,19 +32,26 @@ fi
 TOKEN="$(gh auth token --user "${GH_ACCOUNT}")"
 export GH_TOKEN="${TOKEN}"
 
-echo "==> Looking for the latest CI run on '${BRANCH}'"
+# Match on the commit, not just the branch. A run takes a few seconds to appear
+# after a push, and picking "the latest run on this branch" in that window
+# returns the *previous* commit's run — which may be green while the new one is
+# still queued, reporting a success that says nothing about what was just
+# pushed.
+SHA="$(git rev-parse HEAD)"
+echo "==> Looking for the CI run for ${SHA:0:7} on '${BRANCH}'"
 
-# A run can take a few seconds to appear after a push.
 RUN_ID=""
-for _ in $(seq 1 10); do
-    RUN_ID="$(gh run list --repo "${REPO}" --branch "${BRANCH}" --limit 1 \
-        --json databaseId --jq '.[0].databaseId // empty')"
+for _ in $(seq 1 20); do
+    RUN_ID="$(gh run list --repo "${REPO}" --branch "${BRANCH}" --limit 20 \
+        --json databaseId,headSha \
+        --jq "[.[] | select(.headSha == \"${SHA}\")] | .[0].databaseId // empty")"
     [ -n "${RUN_ID}" ] && break
     sleep 3
 done
 
 if [ -z "${RUN_ID}" ]; then
-    echo "No CI run found for '${BRANCH}'. Has it been pushed?" >&2
+    echo "No CI run found for commit ${SHA:0:7} on '${BRANCH}'." >&2
+    echo "Has it been pushed? Does the workflow trigger on this branch?" >&2
     exit 1
 fi
 
