@@ -124,11 +124,25 @@ enum DesignTokens {
         /// Height of the 7-day sparkline.
         static let sparklineHeight: CGFloat = 36
 
-        /// Default size of the History window.
+        /// Size the History window opens at.
         static let historyWindowSize = CGSize(width: 520, height: 460)
 
-        /// Default size of the Settings window.
-        static let settingsWindowSize = CGSize(width: 460, height: 360)
+        /// Smallest useful History window. The width matches the default: five
+        /// stat tiles sit in one row, and narrowing it only truncates them.
+        /// Below this height the chart and the day list fight over the same
+        /// space and neither is readable.
+        static let historyWindowMinSize = CGSize(width: 520, height: 400)
+
+        /// Size the Settings window opens at.
+        ///
+        /// Tall enough to show every section without scrolling on a normal
+        /// display. The content scrolls, so this is a comfort figure rather
+        /// than a constraint — but a window that opens already clipped reads
+        /// as broken even when scrolling works.
+        static let settingsWindowSize = CGSize(width: 460, height: 620)
+
+        /// Smallest Settings window. The content scrolls below this.
+        static let settingsWindowMinSize = CGSize(width: 460, height: 380)
     }
 
     // MARK: - Animation
