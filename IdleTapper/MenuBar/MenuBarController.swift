@@ -53,7 +53,11 @@ final class MenuBarController {
 
     /// Create the status item and begin reflecting the tracker's state.
     func install() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // Length is set explicitly in `updateStatusItem()` rather than left
+        // variable, so the item never resizes with the count.
+        let item = NSStatusBar.system.statusItem(
+            withLength: StatusItemRenderer.statusItemLength(for: settings.menuBarDisplayStyle)
+        )
 
         guard let button = item.button else {
             AppLog.menuBar.error("[MenuBar] Status item has no button — cannot install")
@@ -212,16 +216,25 @@ final class MenuBarController {
     }
 
     private func updateStatusItem() {
-        guard let button = statusItem?.button else { return }
+        guard let item = statusItem, let button = item.button else { return }
 
         let style = settings.menuBarDisplayStyle
         let count = tracker.todayCount
 
+        // Pin the width so the item cannot resize as the count grows. Without
+        // this the whole menu bar shifts on every extra digit.
+        item.length = StatusItemRenderer.statusItemLength(for: style)
+
         button.image = StatusItemRenderer.image(for: style)
-        button.title = StatusItemRenderer.title(for: count, style: style)
         button.toolTip = StatusItemRenderer.tooltip(for: count)
 
-        // Keep a small gap between icon and number when both are shown.
+        // Attributed rather than plain, so the count renders in a monospaced
+        // font. Combined with the renderer's fixed-width padding, this is what
+        // stops the item resizing — and the menu bar shifting — on every tap.
+        button.attributedTitle = StatusItemRenderer.attributedTitle(for: count, style: style)
+
+        // Keep the number tight against the icon rather than letting the pair
+        // spread across the reserved width.
         button.imageHugsTitle = style.showsIcon && style.showsCount
     }
 

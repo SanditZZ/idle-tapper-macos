@@ -22,7 +22,7 @@ That is the whole app. It does not sync, does not phone home, and does not ask f
 - **One big button** — counts on press-down, so fast tapping never drops a tap
 - **Automatic daily reset** — the counter zeroes at your Mac's local midnight
 - **History that persists** — every past day is kept, with streaks, best day, and daily average
-- **Live count in the menu bar** — icon, icon plus count, or count alone
+- **Live count in the menu bar** — icon, icon plus count, or count alone, in a fixed-width item that never shifts the menu bar as the number grows
 - **Sparkline** — the last seven days at a glance in the popover, longer ranges in the History window
 - **Export** — your history as portable JSON, any time
 - **Launch at login** — optional, via the system login items API
@@ -195,7 +195,7 @@ A tapper generates writes far faster than a normal app, so:
 
 ## Testing
 
-37 tests across 5 suites, using [Swift Testing](https://developer.apple.com/documentation/testing).
+47 tests across 5 suites, using [Swift Testing](https://developer.apple.com/documentation/testing).
 
 ```bash
 xcodebuild -project IdleTapper.xcodeproj -scheme IdleTapper test
