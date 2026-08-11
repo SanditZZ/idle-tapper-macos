@@ -135,6 +135,18 @@ Idle Tapper detects this and tells you: it shows an alert offering to switch to 
 
 **The fix is to free a menu bar slot** — quit or hide another menu bar app, or use a menu bar manager. Switching Idle Tapper to "Icon only" in Settings helps but is not guaranteed to be enough on a very crowded bar.
 
+### The app icon is blank, or shows a grey grid
+
+That grid is Apple's icon placeholder, and it means macOS has a **stale cached icon** — not that the icon is missing from the app.
+
+macOS caches an app's icon against its bundle path in the Launch Services database. A development build keeps the same path across rebuilds, so once a placeholder is cached it survives any number of rebuilds. Refresh it:
+
+```bash
+./scripts/refresh-icon-cache.sh
+```
+
+Then check Finder, the Dock or Spotlight again. The bundle itself is almost certainly fine — you can confirm by looking at `Contents/Resources/AppIcon.icns` inside the built app.
+
 ### Launch at login will not turn on
 
 macOS refuses to register a login item for an app running outside a normal install location. Move Idle Tapper to `/Applications` and try again. If the toggle turns on and then reverts, check System Settings → General → Login Items — the item may be registered but switched off there.

@@ -241,3 +241,6 @@ do {
 }
 
 print("Done — \(IconSpec.variants.count) images written to \(outputURL.path)")
+print("")
+print("Rebuild, then run scripts/refresh-icon-cache.sh — macOS caches an app's")
+print("icon against its bundle path, so a rebuilt app keeps showing the old one.")

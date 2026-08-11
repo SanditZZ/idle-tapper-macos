@@ -109,7 +109,10 @@ Colors must be appearance-adaptive or translucent — they sit on the popover's 
 
 ```bash
 swift scripts/generate-app-icon.swift
+./scripts/refresh-icon-cache.sh          # rebuild first
 ```
+
+**A changed icon will not appear until the cache is refreshed.** macOS caches an app's icon against its bundle path in the Launch Services database, and a development build keeps the same path across rebuilds. Once a stale icon is cached — typically the placeholder grid recorded before the icon set existed — Finder, the Dock and Spotlight keep showing it however many times the app is rebuilt. **Do not go looking for a bug in the asset catalog when this happens**; check the cache first.
 
 ---
 
