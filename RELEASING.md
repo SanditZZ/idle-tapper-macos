@@ -55,7 +55,9 @@ Open a PR and merge it server-side. The **Release** workflow then:
 5. Builds the release notes, prepending install instructions and the Gatekeeper bypass when the build is unnotarized.
 6. Creates the GitHub release, which creates the tag.
 
-Then **Generate Appcast** runs on the published release and updates the Sparkle feed — once the prerequisites below are in place.
+7. Calls **Generate Appcast** as a second job, which signs the zip and commits the updated feed to `gh-pages`.
+
+The appcast is invoked as a job rather than left to the `release: published` event, because that event never arrives: a release created by a workflow is created by `GITHUB_TOKEN`, and GitHub will not start new workflow runs from events that token raises. v0.1.0 shipped with no appcast for exactly this reason, and it failed silently — the release looked perfect while nothing installed was ever told about it.
 
 To re-run a release for a version that already has a tag, dispatch the workflow manually with `force: true`. It deletes and recreates the release and its tag.
 
@@ -74,28 +76,15 @@ That means **the signing key is the security boundary**. Anyone holding the priv
 | Feed | `https://sanditzz.github.io/idle-tapper-macos/appcast.xml` |
 | Cadence | Daily, on by default, switchable in Settings → Updates |
 
-### Turning the feed on — required before updates work at all
+### The feed, and how it is hosted
 
-**GitHub Pages does not serve private repositories on the free plan**, so the feed cannot go live until the repository is public. Until then the app checks a URL that 404s, finds nothing, and says so if you press *Check Now*. Nothing breaks; updates simply do not happen.
+Already set up, as of v0.1.0 — this is recorded so it can be rebuilt if it is ever lost:
 
-When you make the repository public:
+- **`gh-pages` branch** holds `appcast.xml` and `releases/`. It contains no source, and its README says as much. Never edit either by hand: the appcast carries a signature over each archive, and a hand-edited file fails verification in every installed copy.
+- **GitHub Pages** serves that branch from the repository root. Pages is only free on public repositories, which is part of why this one is public.
+- **`SPARKLE_PRIVATE_KEY`** is set as a repository secret.
 
-1. **Create the branch.**
-   ```bash
-   git switch --orphan gh-pages
-   git commit --allow-empty -m "Initialised the update feed branch"
-   git push -u origin gh-pages
-   git switch -
-   ```
-2. **Enable Pages** — repository Settings → Pages → deploy from branch `gh-pages`, folder `/`.
-3. **Add the signing key.** Export the private key from the login keychain with Sparkle's `generate_keys -x <file>`, then:
-   ```bash
-   GH_TOKEN="$(gh auth token --user SanditZZ)" gh secret set SPARKLE_PRIVATE_KEY \
-     --repo SanditZZ/idle-tapper-macos < <exported-key-file>
-   ```
-   Delete the export afterwards, and keep an offline backup somewhere safe. **Losing this key means no installed copy of the app can ever be updated again** — every future release would have to be installed by hand.
-4. **Generate the feed for the existing release:** run the **Generate Appcast** workflow manually with the release tag.
-5. **Confirm** `https://sanditzz.github.io/idle-tapper-macos/appcast.xml` loads and lists the version.
+Keep an offline backup of the private key — a password manager is the right place. **Losing it means no installed copy of the app can ever be updated again**; every future version would have to be installed by hand, by every user.
 
 ### If the key is ever lost or compromised
 
@@ -142,7 +131,8 @@ With those present the workflow imports the certificate into a temporary keychai
 | Release workflow ran and published nothing | `MARKETING_VERSION` already has a tag. Intended. Bump the version. |
 | "Could not read MARKETING_VERSION" | `xcodebuild -showBuildSettings` failed — usually a project file that does not open. Run it locally to see the real error. |
 | Notes say "See the commit history" | No `## [<version>]` section in `CHANGELOG.md` for this version. |
-| Appcast workflow fails at checkout | No `gh-pages` branch, or Pages is not enabled. See the go-live checklist above. |
+| Appcast workflow fails at checkout | No `gh-pages` branch, or Pages is not enabled. See the feed section above. |
 | Appcast workflow fails immediately | `SPARKLE_PRIVATE_KEY` is not set. It fails deliberately rather than publishing an unsigned feed. |
+| A release published but the feed did not update | The appcast job was skipped or failed. Re-run it with **Generate Appcast** → Run workflow → the release tag. |
 | App never offers an update | `CURRENT_PROJECT_VERSION` was not incremented, or the feed is not reachable. Check Console.app, subsystem `com.kkpon3.IdleTapper`, category `Updates`. |
 | Update downloads then refuses to install | Signature mismatch — the appcast was signed with a different key than the app expects. |

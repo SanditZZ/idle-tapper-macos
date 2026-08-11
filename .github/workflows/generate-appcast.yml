@@ -18,8 +18,26 @@ name: Generate Appcast
 # automatic updates yet. RELEASING.md carries the go-live checklist.
 
 on:
+  # Called directly by the Release workflow. This is the path that actually
+  # runs in practice, and it exists because `release: published` does NOT fire
+  # when the release is created by a workflow: GitHub refuses to start new runs
+  # from events raised by GITHUB_TOKEN, to stop workflows triggering
+  # themselves. v0.1.0 published cleanly and the feed was never generated,
+  # which is a silent failure — the release looks fine and updates simply never
+  # reach anyone. Being called as a job also makes the ordering deterministic
+  # instead of racing an event.
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "Release tag to generate the appcast for"
+        required: true
+        type: string
+
+  # Kept for a release published by hand through the web UI, which is a real
+  # user action and therefore does fire.
   release:
     types: [published]
+
   workflow_dispatch:
     inputs:
       release_tag:
