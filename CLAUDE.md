@@ -20,8 +20,9 @@ That script runs **exactly** what `.github/workflows/ci.yml` runs — the same t
 2. Only then push.
 3. **After pushing, confirm the real run went green** — a local pass is strong evidence, not proof, because the runner has a different Xcode and a clean checkout:
    ```bash
-   GH_TOKEN="$(gh auth token --user SanditZZ)" gh run watch --repo SanditZZ/idle-tapper-macos --exit-status
+   ./scripts/ci-watch.sh
    ```
+   It resolves the latest run for the current branch, waits for it, and exits non-zero if it failed. (`gh run watch` on its own requires an explicit run id when not attached to a terminal, and would otherwise use the wrong GitHub account.)
 4. If the remote run fails, **fix it immediately** — do not leave `main` or an open PR red, and do not move on to other work first.
 
 **Do not weaken the checks to make them pass.** If a warning is genuinely unavoidable, say so explicitly and explain why rather than removing `SWIFT_TREAT_WARNINGS_AS_ERRORS` or deleting a test.

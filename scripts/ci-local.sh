@@ -86,4 +86,4 @@ case "${STAGE}" in
 esac
 
 printf '\n%s%s✓ CI checks passed — safe to push%s\n' "${BOLD}" "${GREEN}" "${RESET}"
-printf '%sRemember to confirm the real run afterwards: gh run watch --exit-status%s\n' "${DIM}" "${RESET}"
+printf '%sAfter pushing, confirm the real run: scripts/ci-watch.sh%s\n' "${DIM}" "${RESET}"

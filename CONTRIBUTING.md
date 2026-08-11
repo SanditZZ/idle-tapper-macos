@@ -33,6 +33,12 @@ The build must stay **warning-free**; CI treats Swift warnings as errors. If you
 
 If you change the flags in `scripts/ci-local.sh`, change `.github/workflows/ci.yml` to match, and vice versa. If the two drift, "it passed locally" stops meaning anything.
 
+After pushing, confirm the real run went green — a local pass is strong evidence, not proof, since the runner has a different Xcode and a clean checkout:
+
+```bash
+./scripts/ci-watch.sh
+```
+
 ---
 
 ## Architecture rules
