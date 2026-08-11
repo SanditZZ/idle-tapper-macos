@@ -37,6 +37,10 @@ struct PopoverContentView: View {
         }
         .padding(DesignTokens.Spacing.popoverPadding)
         .frame(width: DesignTokens.Layout.popoverWidth)
+        // Applied after the frame so it covers the whole popover body rather
+        // than just the stack. See `AppColors.popoverSurface` for why the
+        // popover cannot rely on its own backdrop alone.
+        .background(AppColors.popoverSurface)
     }
 
     // MARK: - Sections

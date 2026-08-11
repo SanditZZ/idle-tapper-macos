@@ -15,6 +15,21 @@ enum AppColors {
 
     // MARK: - Surfaces
 
+    /// Surface sitting behind the popover's content.
+    ///
+    /// `NSPopover` supplies a fully translucent backdrop, which meant the
+    /// contrast of every label on it was decided by whichever window happened to
+    /// be underneath: the same caption measured 3.3:1 over a light desktop and
+    /// 2.9:1 over a dark window. Colour alone cannot fix that, because there is
+    /// no single colour that is legible against an unknown background.
+    ///
+    /// This bounds it. The popover keeps a little translucency — it should still
+    /// read as a HUD floating over the desktop, not an opaque box — but the
+    /// backdrop now contributes a small fraction of the result instead of all of
+    /// it, so contrast is a property of the design rather than of what the user
+    /// left open behind it.
+    static let popoverSurface = Color.adaptivePopoverSurface
+
     /// Card background — translucent so vibrancy shows through.
     static let cardBackground = Color.primary.opacity(0.04)
 
@@ -125,6 +140,9 @@ extension Color {
 
     /// See `AppColors.textTertiary`.
     static let adaptiveTextTertiary = Color(nsColor: .adaptiveTextTertiary)
+
+    /// See `AppColors.popoverSurface`.
+    static let adaptivePopoverSurface = Color(nsColor: .adaptivePopoverSurface)
 }
 
 extension NSColor {
@@ -160,6 +178,19 @@ extension NSColor {
     /// See `adaptiveTextSecondary`.
     static let adaptiveTextTertiary = NSColor(name: nil) { appearance in
         appearance.isDark ? NSColor(white: 1.0, alpha: 0.62) : NSColor(white: 0.0, alpha: 0.72)
+    }
+
+    /// See `AppColors.popoverSurface`.
+    ///
+    /// The greys match what the popover's own material measures against a
+    /// neutral backdrop, so this reads as the surface the design already had —
+    /// only now it stays that colour. The alpha is the whole point: at 0.92 the
+    /// window behind contributes 8% of the result rather than 100%, which turns
+    /// a 60-level swing in background brightness into about 5.
+    static let adaptivePopoverSurface = NSColor(name: nil) { appearance in
+        appearance.isDark
+            ? NSColor(white: 0.137, alpha: 0.92)
+            : NSColor(white: 0.925, alpha: 0.92)
     }
 }
 
