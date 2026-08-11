@@ -125,13 +125,17 @@ enum DesignTokens {
         static let sparklineHeight: CGFloat = 36
 
         /// Size the History window opens at.
-        static let historyWindowSize = CGSize(width: 520, height: 460)
+        ///
+        /// 560 rather than 520: at 520 the five stat tiles each got about 82pt,
+        /// which is narrower than the longest caption, so the window opened with
+        /// "CURRENT ST…" and "LONGEST STR…" already truncated.
+        static let historyWindowSize = CGSize(width: 560, height: 460)
 
         /// Smallest useful History window. The width matches the default: five
         /// stat tiles sit in one row, and narrowing it only truncates them.
         /// Below this height the chart and the day list fight over the same
         /// space and neither is readable.
-        static let historyWindowMinSize = CGSize(width: 520, height: 400)
+        static let historyWindowMinSize = CGSize(width: 560, height: 400)
 
         /// Size the Settings window opens at.
         ///
@@ -139,7 +143,11 @@ enum DesignTokens {
         /// display. The content scrolls, so this is a comfort figure rather
         /// than a constraint — but a window that opens already clipped reads
         /// as broken even when scrolling works.
-        static let settingsWindowSize = CGSize(width: 460, height: 620)
+        ///
+        /// 620 did not actually meet that bar: measured against the real window
+        /// the Data section was still cut off, so the claim above was false for
+        /// every section after Menu Bar. The content needs about 700.
+        static let settingsWindowSize = CGSize(width: 460, height: 700)
 
         /// Smallest Settings window. The content scrolls below this.
         static let settingsWindowMinSize = CGSize(width: 460, height: 380)

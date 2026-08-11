@@ -24,10 +24,16 @@ struct StatTile: View {
 
     var body: some View {
         VStack(alignment: alignment, spacing: 2) {
+            // The value already shrinks rather than truncating; the label has to
+            // as well, or a long caption in a narrow tile is cut to "CURRENT ST…"
+            // and the tile stops saying what it is. Widening the History window
+            // fixes the common case — this keeps it honest when a tile is
+            // narrower still.
             Text(label.uppercased())
                 .font(DesignTokens.Typography.statLabel)
                 .foregroundStyle(AppColors.textTertiary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             HStack(spacing: DesignTokens.Spacing.extraSmall) {
                 if let systemImage {

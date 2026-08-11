@@ -15,7 +15,38 @@ struct SettingsView: View {
     @Bindable var updates: UpdateService
 
     @State private var isConfirmingReset = false
-    @State private var exportMessage: String?
+    @State private var exportOutcome: ExportOutcome?
+
+    /// The result of the last export.
+    ///
+    /// A failure used to clear the message and log, which left the user looking
+    /// at a save panel that had closed with nothing to show for it. An export
+    /// that fails has to say so on screen.
+    private enum ExportOutcome {
+        case succeeded(fileName: String)
+        case failed(reason: String)
+
+        var message: String {
+            switch self {
+            case .succeeded(let fileName): "Exported to \(fileName)"
+            case .failed(let reason): "Export failed — \(reason)"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .succeeded: "checkmark.circle.fill"
+            case .failed: "exclamationmark.triangle.fill"
+            }
+        }
+
+        var tint: Color {
+            switch self {
+            case .succeeded: AppColors.success
+            case .failed: AppColors.error
+            }
+        }
+    }
 
     var body: some View {
         // The sections scroll; the footer does not. Settings grows a section
@@ -174,10 +205,11 @@ struct SettingsView: View {
             Toggle("Ask before deleting history", isOn: $settings.confirmBeforeReset)
                 .font(DesignTokens.Typography.body)
 
-            if let exportMessage {
-                Text(exportMessage)
+            if let exportOutcome {
+                Label(exportOutcome.message, systemImage: exportOutcome.systemImage)
                     .font(DesignTokens.Typography.caption)
-                    .foregroundStyle(AppColors.success)
+                    .foregroundStyle(exportOutcome.tint)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -210,9 +242,15 @@ struct SettingsView: View {
                 .font(DesignTokens.Typography.statLabel)
                 .foregroundStyle(AppColors.textTertiary)
 
+            // Fill the width before the card is applied. Without this each card
+            // hugs its own content, so the four sections rendered at four
+            // different widths — a ragged right edge that reads as unfinished
+            // rather than as deliberate. The outer stack filling the window is
+            // not enough; the card sizes to whatever it wraps.
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
                 content()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .appCard()
         }
     }
@@ -234,10 +272,10 @@ struct SettingsView: View {
         do {
             let data = try tracker.exportJSON()
             try data.write(to: url, options: .atomic)
-            exportMessage = "Exported to \(url.lastPathComponent)"
+            exportOutcome = .succeeded(fileName: url.lastPathComponent)
             AppLog.settings.info("[Settings] Exported history")
         } catch {
-            exportMessage = nil
+            exportOutcome = .failed(reason: error.localizedDescription)
             AppLog.settings.error(
                 "[Settings] Export failed: \(error.localizedDescription, privacy: .public)"
             )

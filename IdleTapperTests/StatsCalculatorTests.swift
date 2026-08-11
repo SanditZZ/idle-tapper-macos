@@ -155,4 +155,23 @@ struct StatsCalculatorTests {
         #expect(emptyBar.normalizedHeight(max: 100) > 0, "Empty bars stay visible")
         #expect(peakBar.normalizedHeight(max: 0) > 0, "A zero peak must not divide by zero")
     }
+
+    // MARK: - Formatting
+
+    @Test("A one-day streak reads 'day', not 'days'")
+    func dayCountPluralisation() {
+        #expect(StatsCalculator.dayCountText(1) == "1 day", "The first case a new user sees")
+        #expect(StatsCalculator.dayCountText(0) == "0 days")
+        #expect(StatsCalculator.dayCountText(2) == "2 days")
+    }
+
+    @Test("The daily average is grouped like every other figure and survives bad input")
+    func averageFormatting() {
+        #expect(StatsCalculator.averageText(2633) == 2633.formatted(), "Grouped, not '2633'")
+        #expect(StatsCalculator.averageText(0.4) == "0", "Rounds down to zero rather than '0.4'")
+        #expect(StatsCalculator.averageText(0) == "0")
+        #expect(StatsCalculator.averageText(-5) == "0", "A negative average is not displayable")
+        #expect(StatsCalculator.averageText(.nan) == "0", "Never renders 'nan'")
+        #expect(StatsCalculator.averageText(.infinity) == "0")
+    }
 }

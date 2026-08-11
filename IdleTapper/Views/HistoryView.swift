@@ -80,13 +80,13 @@ struct HistoryView: View {
             )
             StatTile(
                 label: "Current streak",
-                value: "\(tracker.stats.currentStreak) days",
+                value: StatsCalculator.dayCountText(tracker.stats.currentStreak),
                 systemImage: "flame.fill",
                 tint: AppColors.error
             )
             StatTile(
                 label: "Longest streak",
-                value: "\(tracker.stats.longestStreak) days",
+                value: StatsCalculator.dayCountText(tracker.stats.longestStreak),
                 systemImage: "crown.fill",
                 tint: AppColors.warning
             )
@@ -136,12 +136,12 @@ struct HistoryView: View {
         HStack {
             Text(bar.dayStart.formatted(date: .complete, time: .omitted))
                 .font(DesignTokens.Typography.body)
-                .foregroundStyle(bar.isToday ? AppColors.accent : AppColors.textPrimary)
+                .foregroundStyle(bar.isToday ? AppColors.accentOnText : AppColors.textPrimary)
 
             if bar.isToday {
                 Text("TODAY")
                     .font(DesignTokens.Typography.tiny)
-                    .foregroundStyle(AppColors.accent)
+                    .foregroundStyle(AppColors.accentOnText)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)
                     .background(
@@ -182,8 +182,7 @@ struct HistoryView: View {
     }
 
     private var averageText: String {
-        let average = tracker.stats.averagePerActiveDay
-        return average > 0 ? String(format: "%.0f", average) : "0"
+        StatsCalculator.averageText(tracker.stats.averagePerActiveDay)
     }
 
     private func reload() {
