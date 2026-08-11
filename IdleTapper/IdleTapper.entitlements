@@ -2,9 +2,29 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!--
+	  The app sandbox is deliberately OFF.
+
+	  Sparkle installs an update by replacing the application bundle in
+	  /Applications, which a sandboxed app cannot do. Sparkle can be made to
+	  work inside the sandbox via XPC installer services, but that is a
+	  considerably more fragile arrangement, and the app handles no untrusted
+	  input — it counts button presses and reads its own database — so the
+	  sandbox was buying very little here.
+
+	  The cost is that the database moved out of the container. See
+	  StoreMigration / StoreMigrator, which carry the old one across.
+	-->
 	<key>com.apple.security.app-sandbox</key>
+	<false/>
+
+	<!-- Fetching the Sparkle appcast and the update archive. Nothing else in
+	     the app makes a network request. -->
+	<key>com.apple.security.network.client</key>
 	<true/>
-	<key>com.apple.security.files.user-selected.read-write</key>
+
+	<!-- Sparkle ships its own frameworks inside the bundle. -->
+	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
 </dict>
 </plist>
