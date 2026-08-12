@@ -46,6 +46,14 @@ One dependency: [Sparkle](https://sparkle-project.org), which powers automatic u
 
 ## Installation
 
+### Homebrew
+
+```bash
+brew install sanditzz/tap/idle-tapper
+```
+
+This installs the same DMG the release page offers, clears the Gatekeeper quarantine flag automatically (see below), and drops the app in `/Applications`. The cask is updated the moment a new version is released — see [RELEASING.md](RELEASING.md).
+
 ### Download a release
 
 Grab the latest **[release](https://github.com/SanditZZ/idle-tapper-macos/releases/latest)** and take either file:
@@ -58,6 +66,8 @@ Grab the latest **[release](https://github.com/SanditZZ/idle-tapper-macos/releas
 **Install to `/Applications`.** Launch at login only works from a normal install location — macOS refuses to register a login item for an app sitting in a Downloads folder.
 
 ### First launch: you will have to get past Gatekeeper
+
+**Skip this section if you installed via Homebrew** — the cask clears the quarantine flag for you. It only applies to a manual DMG/zip download, which macOS treats like any browser download.
 
 Idle Tapper is **not notarized by Apple**. Notarization requires the paid Apple Developer Program, which this project does not have, so on first launch macOS says:
 

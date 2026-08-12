@@ -55,7 +55,7 @@ Open a PR and merge it server-side. The **Release** workflow then:
 5. Builds the release notes, prepending install instructions and the Gatekeeper bypass when the build is unnotarized.
 6. Creates the GitHub release, which creates the tag.
 
-7. Calls **Generate Appcast** as a second job, which signs the zip and commits the updated feed to `gh-pages`.
+7. Calls **Generate Appcast** and **Update Homebrew Tap** as two further jobs, running in parallel — one signs the zip and commits the updated feed to `gh-pages`, the other pushes the new version and checksum to the Homebrew tap. Neither depends on the other.
 
 The appcast is invoked as a job rather than left to the `release: published` event, because that event never arrives: a release created by a workflow is created by `GITHUB_TOKEN`, and GitHub will not start new workflow runs from events that token raises. v0.1.0 shipped with no appcast for exactly this reason, and it failed silently — the release looked perfect while nothing installed was ever told about it.
 
@@ -89,6 +89,48 @@ Keep an offline backup of the private key — a password manager is the right pl
 ### If the key is ever lost or compromised
 
 There is no revocation. Generate a new key pair, put the new public key in `Info.plist`, ship a release **installed manually by every user**, and regenerate the appcast with the new key. Treat this as the disaster it is and keep a backup.
+
+---
+
+## Homebrew tap
+
+```bash
+brew install sanditzz/tap/idle-tapper
+```
+
+This is a separate delivery path from Sparkle, and the two do different jobs:
+
+- **Sparkle** updates a copy of the app that is already installed, however it got there.
+- **The Homebrew tap** only decides what a *fresh* `brew install` or `brew upgrade` fetches. It has no way to reach a Mac that already has the app open.
+
+That is also why the cask is marked `auto_updates true` in [`SanditZZ/homebrew-tap`](https://github.com/SanditZZ/homebrew-tap): it tells Homebrew that Sparkle, not `brew upgrade`, is what keeps an installed copy current, so `brew upgrade` does not fight Sparkle by reinstalling over it.
+
+### How it stays current
+
+The **Update Homebrew Tap** workflow (`.github/workflows/update-homebrew-tap.yml`) runs as a job of **Release**, in parallel with **Generate Appcast**:
+
+1. Downloads the just-published release's `checksums-<version>.txt` and reads the DMG's sha256 out of it — never recomputed, so it can never disagree with the checksum a user verifies their download against.
+2. Checks out `SanditZZ/homebrew-tap` and edits `Casks/idle-tapper.rb`'s `version` and `sha256` in place.
+3. Commits straight to the tap's `main` and pushes. No PR: the tap has one maintainer and one cask, and the values it writes are read verbatim from this repo's own release, not invented.
+
+| Secret | What it holds |
+|---|---|
+| `HOMEBREW_TAP_TOKEN` | A personal access token for the `SanditZZ` account, scoped to `contents: write` on `SanditZZ/homebrew-tap` only. A fine-grained PAT restricted to that one repository is the right shape for it. |
+
+```bash
+GH_TOKEN="$(gh auth token --user SanditZZ)" gh secret set HOMEBREW_TAP_TOKEN \
+  --repo SanditZZ/idle-tapper-macos
+```
+
+Because `GITHUB_TOKEN` is scoped to the repository the workflow runs in, it cannot push to `homebrew-tap` — this is unrelated to, and does not reuse, the notarization or Sparkle secrets above.
+
+To re-sync the tap for a version it missed (e.g. the token was added after that release shipped), dispatch **Update Homebrew Tap** manually with the release tag.
+
+The Gatekeeper prompt described above does not apply to a Homebrew install: `Casks/idle-tapper.rb` runs `xattr -dr com.apple.quarantine` on the app in a `postflight` block immediately after installing it, since Homebrew Cask quarantines a download the same way a browser would.
+
+### If the tap falls behind
+
+A missed **Update Homebrew Tap** run is not the emergency a missed appcast run is — nobody's installed copy silently stops updating, because Sparkle was never involved. It only means `brew install`/`brew upgrade` briefly offers an older version. Re-run the workflow for the missed tag and it corrects itself.
 
 ---
 
@@ -134,5 +176,6 @@ With those present the workflow imports the certificate into a temporary keychai
 | Appcast workflow fails at checkout | No `gh-pages` branch, or Pages is not enabled. See the feed section above. |
 | Appcast workflow fails immediately | `SPARKLE_PRIVATE_KEY` is not set. It fails deliberately rather than publishing an unsigned feed. |
 | A release published but the feed did not update | The appcast job was skipped or failed. Re-run it with **Generate Appcast** → Run workflow → the release tag. |
+| A release published but `brew install` still offers the old version | The **Update Homebrew Tap** job was skipped or failed — often a missing or expired `HOMEBREW_TAP_TOKEN`. Re-run it with **Update Homebrew Tap** → Run workflow → the release tag. |
 | App never offers an update | `CURRENT_PROJECT_VERSION` was not incremented, or the feed is not reachable. Check Console.app, subsystem `com.kkpon3.IdleTapper`, category `Updates`. |
 | Update downloads then refuses to install | Signature mismatch — the appcast was signed with a different key than the app expects. |

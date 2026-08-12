@@ -1,0 +1,127 @@
+name: Update Homebrew Tap
+
+# Keeps the SanditZZ/homebrew-tap cask in step with published releases, so
+# `brew install sanditzz/tap/idle-tapper` always resolves to the latest
+# version and `brew upgrade` does not offer a stale one.
+#
+# This does NOT deliver updates to installs already on someone's Mac — Sparkle
+# does that (see RELEASING.md). This only keeps a *fresh* `brew install`
+# current, and it commits straight to the tap's main branch: there is no
+# review step because the tap has exactly one maintainer and one cask, and
+# the values it writes are read verbatim from the release that was just
+# published in this repo, not invented.
+#
+# Requires the HOMEBREW_TAP_TOKEN secret: a personal access token for the
+# SanditZZ account with contents:write on SanditZZ/homebrew-tap. The default
+# GITHUB_TOKEN cannot push to a different repository.
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "Release tag to update the tap for, e.g. v0.1.1"
+        required: true
+        type: string
+
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to (re)sync the tap to, e.g. v0.1.1"
+        required: true
+        type: string
+
+concurrency:
+  group: homebrew-tap
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update-tap:
+    name: Update the cask
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      TAP_REPO: SanditZZ/homebrew-tap
+      TAG: ${{ inputs.release_tag }}
+
+    steps:
+      - name: Fail early without a tap token
+        env:
+          TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "${TOKEN}" ]; then
+            echo "::error::HOMEBREW_TAP_TOKEN is not set. The tap cannot be updated. See RELEASING.md."
+            exit 1
+          fi
+
+      - name: Read the release's checksum
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+          gh release download "${TAG}" --repo "${{ github.repository }}" \
+            --pattern "checksums-*.txt" --dir . --clobber
+
+          SHA256="$(awk -v f="./IdleTapper-${VERSION}.dmg" '$2 == f {print $1}' "checksums-${VERSION}.txt")"
+
+          if [ -z "${SHA256}" ]; then
+            echo "::error::Could not find a checksum for IdleTapper-${VERSION}.dmg in checksums-${VERSION}.txt"
+            exit 1
+          fi
+
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "::notice::${TAG} → version ${VERSION}, sha256 ${SHA256}"
+
+      - name: Check out the tap
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.TAP_REPO }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update the cask
+        id: update
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA256: ${{ steps.release.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          CASK="tap/Casks/idle-tapper.rb"
+
+          [ -f "${CASK}" ] || { echo "::error::${CASK} not found"; exit 1; }
+
+          sed -i \
+            -e "s/^  version \".*\"/  version \"${VERSION}\"/" \
+            -e "s/^  sha256 \".*\"/  sha256 \"${SHA256}\"/" \
+            "${CASK}"
+
+          grep -q "version \"${VERSION}\"" "${CASK}"
+          grep -q "sha256 \"${SHA256}\"" "${CASK}"
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/idle-tapper.rb
+
+          if git diff --staged --quiet; then
+            echo "::notice::Cask already up to date"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Updated idle-tapper to ${VERSION}"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summary
+        if: steps.update.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: echo "::notice::sanditzz/homebrew-tap now serves idle-tapper ${VERSION}"
