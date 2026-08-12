@@ -339,3 +339,21 @@ jobs:
       release_tag: ${{ needs.release.outputs.tag }}
     # The called workflow needs SPARKLE_PRIVATE_KEY.
     secrets: inherit
+
+  # ---------------------------------------------------------------------
+  # Keep the Homebrew tap current
+  #
+  # Independent of the appcast job above: this keeps a fresh `brew install`
+  # pointed at the right version, while Sparkle (the appcast) keeps installs
+  # that already exist up to date. Neither depends on the other, so they run
+  # in parallel.
+  # ---------------------------------------------------------------------
+  homebrew:
+    name: Update Homebrew tap
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
+    uses: ./.github/workflows/update-homebrew-tap.yml
+    with:
+      release_tag: ${{ needs.release.outputs.tag }}
+    # The called workflow needs HOMEBREW_TAP_TOKEN.
+    secrets: inherit
