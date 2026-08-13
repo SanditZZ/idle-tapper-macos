@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-08-13
+
 ### Fixed
 
 - There is now one Settings window rather than two. Opening Settings from the popover or the menu bar item gave a different window than ⌘, did, so the same settings could be open twice at once, in two different-looking windows. ⌘, now opens the same window as everything else
@@ -86,7 +88,8 @@ Initial version.
 - App icon generated from the same symbol as the menu bar item, so the two cannot drift apart, via a re-runnable script
 - 64 unit tests across day boundaries, statistics, the repository, menu bar rendering, status item placement, press animation timing, and store migration
 
-[Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.1...v0.1.2
