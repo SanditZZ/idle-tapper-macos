@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-13
+
 ### Added
 
 - History can now be exported as CSV as well as JSON. Pick the format in the save panel: CSV opens directly in a spreadsheet, JSON keeps the exact data for reading back in
@@ -80,7 +82,8 @@ Initial version.
 - App icon generated from the same symbol as the menu bar item, so the two cannot drift apart, via a re-runnable script
 - 64 unit tests across day boundaries, statistics, the repository, menu bar rendering, status item placement, press animation timing, and store migration
 
-[Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.1.0...v0.1.1
