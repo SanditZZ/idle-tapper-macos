@@ -161,4 +161,51 @@ struct TapRepositoryTests {
         #expect(try repository.increment(by: 0, at: today) == 4)
         #expect(try repository.allDays().count == 1)
     }
+
+    // MARK: - Achievements
+
+    @Test("A fresh store has no unlocked achievements")
+    func noAchievementsInitially() throws {
+        let repository = try makeRepository()
+        #expect(try repository.unlockedAchievements().isEmpty)
+    }
+
+    @Test("Unlocking an achievement persists it with its unlock date")
+    func unlockAchievementPersists() throws {
+        let repository = try makeRepository()
+        let date = TestSupport.date(2026, 3, 15, 12, 0, calendar: calendar)
+
+        try repository.unlockAchievement(.firstTap, at: date)
+
+        let unlocked = try repository.unlockedAchievements()
+        #expect(unlocked.map(\.id) == [.firstTap])
+        #expect(unlocked.first?.unlockedAt == date)
+    }
+
+    @Test("Unlocking the same achievement twice does not duplicate it")
+    func unlockIsIdempotent() throws {
+        let repository = try makeRepository()
+        let first = TestSupport.date(2026, 3, 15, 12, 0, calendar: calendar)
+        let second = TestSupport.date(2026, 3, 16, 12, 0, calendar: calendar)
+
+        try repository.unlockAchievement(.firstTap, at: first)
+        try repository.unlockAchievement(.firstTap, at: second)
+
+        let unlocked = try repository.unlockedAchievements()
+        #expect(unlocked.count == 1)
+        #expect(unlocked.first?.unlockedAt == first, "The original unlock date is kept, not overwritten")
+    }
+
+    @Test("Deleting all history leaves unlocked achievements untouched")
+    func deleteAllKeepsAchievements() throws {
+        let repository = try makeRepository()
+        let today = TestSupport.date(2026, 3, 15, 12, 0, calendar: calendar)
+
+        try repository.increment(by: 1, at: today)
+        try repository.unlockAchievement(.firstTap, at: today)
+
+        try repository.deleteAll()
+
+        #expect(try repository.unlockedAchievements().map(\.id) == [.firstTap])
+    }
 }

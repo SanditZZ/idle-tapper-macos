@@ -92,6 +92,10 @@ final class SwiftDataTapRepository: TapRepository {
         // Deleted per object rather than with the bulk `delete(model:)` overload:
         // the bulk form leaves objects already registered in this context, so a
         // subsequent fetch through the same context still returns them.
+        //
+        // Achievement records are deliberately not touched here: an unlock is a
+        // trophy for a milestone already reached, not a live reflection of
+        // current history, so clearing the day-by-day log does not take it back.
         let records = try fetchAllRecords()
 
         do {
@@ -116,6 +120,16 @@ final class SwiftDataTapRepository: TapRepository {
         try performSave()
     }
 
+    func unlockAchievement(_ id: AchievementID, at date: Date) throws {
+        let existing = try fetchAllAchievementRecords()
+        guard !existing.contains(where: { $0.id == id.rawValue }) else { return }
+
+        context.insert(AchievementRecord(id: id.rawValue, unlockedAt: date))
+        hasUnsavedChanges = true
+        scheduleSave()
+        AppLog.persistence.info("[Persistence] Unlocked achievement \(id.rawValue, privacy: .public)")
+    }
+
     // MARK: - Actions: Reads
 
     func count(on date: Date) throws -> Int {
@@ -135,6 +149,10 @@ final class SwiftDataTapRepository: TapRepository {
         let upperBound = DayBoundary.dayStart(daysAgo: -1, from: date, calendar: calendar)
 
         return try allDays().filter { $0.dayStart >= cutoff && $0.dayStart < upperBound }
+    }
+
+    func unlockedAchievements() throws -> [AchievementSnapshot] {
+        try fetchAllAchievementRecords().compactMap(\.snapshot)
     }
 
     // MARK: - Calculations / Helpers
@@ -192,6 +210,20 @@ final class SwiftDataTapRepository: TapRepository {
         } catch {
             AppLog.persistence.error(
                 "[Persistence] Fetch failed: \(error.localizedDescription, privacy: .public)"
+            )
+            throw TapRepositoryError.fetchFailed(underlying: error)
+        }
+    }
+
+    /// Fetch every unlocked-achievement row. The table holds at most one row
+    /// per `AchievementID` — a handful — so, as with `fetchAllRecords()`,
+    /// there is nothing for a `#Predicate` to buy here.
+    private func fetchAllAchievementRecords() throws -> [AchievementRecord] {
+        do {
+            return try context.fetch(FetchDescriptor<AchievementRecord>())
+        } catch {
+            AppLog.persistence.error(
+                "[Persistence] Achievement fetch failed: \(error.localizedDescription, privacy: .public)"
             )
             throw TapRepositoryError.fetchFailed(underlying: error)
         }

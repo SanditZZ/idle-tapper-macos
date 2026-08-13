@@ -20,6 +20,7 @@ final class WindowCoordinator {
 
     private var historyWindow: NSWindow?
     private var settingsWindow: NSWindow?
+    private var achievementsWindow: NSWindow?
 
     init(
         tracker: TapTracker,
@@ -80,6 +81,28 @@ final class WindowCoordinator {
         present(window)
 
         AppLog.app.info("[App] Opened settings window")
+    }
+
+    /// Show the achievements window, reusing it if already open.
+    func showAchievements() {
+        tracker.refresh()
+
+        if let achievementsWindow {
+            present(achievementsWindow)
+            return
+        }
+
+        let window = makeWindow(
+            title: "Achievements",
+            size: DesignTokens.Layout.achievementsWindowSize,
+            minSize: DesignTokens.Layout.achievementsWindowMinSize,
+            extendsUnderTitleBar: true,
+            content: AchievementsView(tracker: tracker)
+        )
+        achievementsWindow = window
+        present(window)
+
+        AppLog.app.info("[App] Opened achievements window")
     }
 
     // MARK: - Helpers

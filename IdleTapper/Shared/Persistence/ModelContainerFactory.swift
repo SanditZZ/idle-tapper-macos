@@ -15,7 +15,14 @@ enum ModelContainerFactory {
 
     /// Every `@Model` type the app persists. Adding a model here is all that is
     /// required for it to be included in the schema.
-    static let schema = Schema([DayRecord.self])
+    ///
+    /// `AchievementRecord` was added after `DayRecord` shipped. It is a wholly
+    /// new table with no change to `DayRecord`'s stored properties, which
+    /// SwiftData's lightweight migration handles automatically — no
+    /// `VersionedSchema` / `SchemaMigrationPlan` needed for this one. That
+    /// machinery is still owed the day a *breaking* change lands on an
+    /// existing model.
+    static let schema = Schema([DayRecord.self, AchievementRecord.self])
 
     /// Container backed by the on-disk SQLite store in Application Support.
     ///

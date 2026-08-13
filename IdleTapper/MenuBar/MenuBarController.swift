@@ -161,6 +161,12 @@ final class MenuBarController {
             keyEquivalent: ","
         ).target = self
 
+        menu.addItem(
+            withTitle: "Achievements…",
+            action: #selector(openAchievements),
+            keyEquivalent: ""
+        ).target = self
+
         menu.addItem(.separator())
 
         menu.addItem(
@@ -184,6 +190,10 @@ final class MenuBarController {
         windowCoordinator.showSettings()
     }
 
+    @objc private func openAchievements() {
+        windowCoordinator.showAchievements()
+    }
+
     @objc private func quit() {
         tracker.flush()
         NSApp.terminate(nil)
@@ -205,6 +215,10 @@ final class MenuBarController {
             onOpenSettings: { [weak self] in
                 self?.closePopover()
                 self?.windowCoordinator.showSettings()
+            },
+            onOpenAchievements: { [weak self] in
+                self?.closePopover()
+                self?.windowCoordinator.showAchievements()
             },
             onQuit: { [weak self] in
                 self?.quit()

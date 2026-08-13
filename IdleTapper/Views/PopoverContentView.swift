@@ -14,6 +14,7 @@ struct PopoverContentView: View {
 
     let onOpenHistory: () -> Void
     let onOpenSettings: () -> Void
+    let onOpenAchievements: () -> Void
     let onQuit: () -> Void
 
     var body: some View {
@@ -23,6 +24,14 @@ struct PopoverContentView: View {
             TapButton(action: tracker.tap, todayCount: tracker.todayCount)
             statsRow
             sparklineSection
+
+            if let unlock = tracker.latestUnlock {
+                achievementBanner(unlock)
+            }
+
+            if let milestone = tracker.activeMilestone {
+                milestoneBanner(milestone)
+            }
 
             if let message = tracker.lastErrorMessage {
                 errorBanner(message)
@@ -119,6 +128,18 @@ struct PopoverContentView: View {
 
             Spacer()
 
+            // Icon-only, unlike History/Settings: the popover is 260pt wide, and
+            // a third labelled button starts crowding it. Trophy carries enough
+            // meaning on its own beside Quit's power glyph.
+            Button(action: onOpenAchievements) {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: DesignTokens.Icons.small))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppColors.textSecondary)
+            .help("Achievements")
+            .accessibilityLabel("Achievements")
+
             Button(action: onQuit) {
                 Image(systemName: "power")
                     .font(.system(size: DesignTokens.Icons.small))
@@ -144,6 +165,32 @@ struct PopoverContentView: View {
     }
 
     // MARK: - Banners
+
+    private func achievementBanner(_ definition: AchievementDefinition) -> some View {
+        Label("Achievement unlocked: \(definition.title)", systemImage: "trophy.fill")
+            .font(DesignTokens.Typography.caption)
+            .foregroundStyle(AppColors.warning)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DesignTokens.Spacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.small)
+                    .fill(AppColors.tint(AppColors.warning))
+            )
+            .accessibilityElement(children: .combine)
+    }
+
+    private func milestoneBanner(_ milestone: Int) -> some View {
+        Label("Milestone: \(milestone.formatted()) taps today", systemImage: "star.fill")
+            .font(DesignTokens.Typography.caption)
+            .foregroundStyle(AppColors.accentOnText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DesignTokens.Spacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.small)
+                    .fill(AppColors.tint(AppColors.accent))
+            )
+            .accessibilityElement(children: .combine)
+    }
 
     private func errorBanner(_ message: String) -> some View {
         Label(message, systemImage: "exclamationmark.triangle.fill")
