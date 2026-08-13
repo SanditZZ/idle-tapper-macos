@@ -15,9 +15,6 @@ struct SettingsSidebar: View {
 
     @Binding var selection: SettingsSection
 
-    /// Shown under the list, the way most macOS settings windows identify the app.
-    let appVersion: String
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: DesignTokens.Spacing.extraSmall) {
@@ -35,19 +32,11 @@ struct SettingsSidebar: View {
             // traffic lights rather than underneath them.
             .padding(.top, DesignTokens.Layout.titleBarInset)
 
+            // No version footer here. It restated what About says canonically,
+            // and on the About page the same string appeared twice at once —
+            // in the sidebar and in the card beside the app icon. macOS's own
+            // Settings keeps its sidebar to navigation for the same reason.
             Spacer(minLength: DesignTokens.Spacing.large)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Idle Tapper")
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundStyle(AppColors.textSecondary)
-                Text(appVersion)
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
-            }
-            .padding(.horizontal, DesignTokens.Spacing.large)
-            .padding(.bottom, DesignTokens.Spacing.large)
-            .accessibilityElement(children: .combine)
         }
         .frame(width: DesignTokens.Layout.settingsSidebarWidth, alignment: .leading)
         .background(VisualEffectView(material: .sidebar))

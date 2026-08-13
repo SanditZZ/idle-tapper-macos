@@ -164,7 +164,13 @@ final class WindowCoordinator {
         // Bumped again to .4 for the sidebar redesign: Settings went from a
         // 460-wide single column to a 720-wide sidebar layout, and any frame
         // remembered from .3 would reopen the new layout at the old width.
-        window.setFrameAutosaveName("IdleTapper.\(title).4")
+        //
+        // And to .5 when the menu bar picker moved onto the General page. That
+        // made General the tallest page and took the window from 620 to 700, so
+        // a frame saved under .4 would reopen it 80pt short with "Restore
+        // Defaults" below the bottom edge — the clipped-on-open failure this
+        // suffix exists to prevent.
+        window.setFrameAutosaveName("IdleTapper.\(title).5")
 
         return window
     }

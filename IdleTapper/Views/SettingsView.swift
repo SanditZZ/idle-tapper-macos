@@ -23,9 +23,15 @@ struct SettingsView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            SettingsSidebar(selection: $selection, appVersion: Self.appVersion)
+            SettingsSidebar(selection: $selection)
 
-            Divider()
+            // An explicit hairline rather than `Divider()`. In dark mode the
+            // sidebar material and the content pane sit close enough in
+            // brightness that the edge between them was doing the whole job of
+            // separating them, and the system divider is the fainter of the two.
+            Rectangle()
+                .fill(AppColors.separator)
+                .frame(width: 1)
 
             VStack(spacing: 0) {
                 detail
@@ -58,9 +64,11 @@ struct SettingsView: View {
     private var detail: some View {
         switch selection {
         case .general:
-            GeneralSettingsPage(settings: settings, launchAtLogin: launchAtLogin)
-        case .appearance:
-            AppearanceSettingsPage(settings: settings, tracker: tracker)
+            GeneralSettingsPage(
+                settings: settings,
+                launchAtLogin: launchAtLogin,
+                tracker: tracker
+            )
         case .updates:
             UpdatesSettingsPage(updates: updates)
         case .data:
@@ -68,12 +76,5 @@ struct SettingsView: View {
         case .about:
             AboutSettingsPage()
         }
-    }
-
-    private static var appVersion: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        let build = info?["CFBundleVersion"] as? String ?? "0"
-        return "\(version) (\(build))"
     }
 }

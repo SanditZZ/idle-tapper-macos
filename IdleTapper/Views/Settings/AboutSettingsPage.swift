@@ -26,11 +26,11 @@ struct AboutSettingsPage: View {
                     }
 
                     VStack(alignment: .leading, spacing: DesignTokens.Spacing.extraSmall) {
-                        Text("Idle Tapper")
+                        Text(AppInfo.name)
                             .font(DesignTokens.Typography.pageTitle)
                             .foregroundStyle(AppColors.textPrimary)
 
-                        Text("Version \(Self.appVersion)")
+                        Text("Version \(AppInfo.displayVersion)")
                             .font(DesignTokens.Typography.body)
                             .foregroundStyle(AppColors.textSecondary)
                             .monospacedDigit()
@@ -54,12 +54,5 @@ struct AboutSettingsPage: View {
                 .buttonStyle(.settings)
             }
         }
-    }
-
-    private static var appVersion: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        let build = info?["CFBundleVersion"] as? String ?? "0"
-        return "\(version) (\(build))"
     }
 }
