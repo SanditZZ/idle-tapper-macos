@@ -61,9 +61,11 @@ struct SparklineView: View {
                 }
             }
         }
+        // One element, not one per bar. Each bar is an unlabelled shape, so a
+        // chart of 30 of them is 30 stops that say nothing.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Recent daily taps")
-        .accessibilityValue(accessibilitySummary)
+        .accessibilityLabel("Daily taps")
+        .accessibilityValue(SparklineSummary.make(from: bars).announcement)
     }
 
     /// Sits in its own row above the bars rather than floating over them: the
@@ -101,12 +103,6 @@ struct SparklineView: View {
     }
 
     // MARK: - Formatting
-
-    private var accessibilitySummary: String {
-        bars
-            .map { "\(Self.mediumDate(for: $0.dayStart)): \($0.tapCount)" }
-            .joined(separator: ", ")
-    }
 
     private static func tooltip(for bar: DayBar) -> String {
         "\(mediumDate(for: bar.dayStart)) — \(bar.tapCount) taps"

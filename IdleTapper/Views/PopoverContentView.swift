@@ -20,7 +20,7 @@ struct PopoverContentView: View {
         VStack(spacing: DesignTokens.Spacing.medium) {
             header
             counter
-            TapButton(action: tracker.tap)
+            TapButton(action: tracker.tap, todayCount: tracker.todayCount)
             statsRow
             sparklineSection
 
@@ -57,6 +57,9 @@ struct PopoverContentView: View {
                 .font(DesignTokens.Typography.tiny)
                 .foregroundStyle(AppColors.textTertiary)
         }
+        // "Today" and the date are one fact, and two stops that each read half
+        // of it is how a two-word header becomes confusing.
+        .accessibilityElement(children: .combine)
     }
 
     private var counter: some View {
@@ -101,6 +104,9 @@ struct PopoverContentView: View {
             Text("Last \(TapTracker.sparklineDayCount) days")
                 .font(DesignTokens.Typography.sectionLabel)
                 .foregroundStyle(AppColors.textSecondary)
+                // Lets rotor navigation jump between the popover's sections
+                // instead of stepping through every element to reach the chart.
+                .accessibilityAddTraits(.isHeader)
 
             SparklineView(bars: tracker.recentBars)
         }

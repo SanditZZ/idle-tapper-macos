@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Accessibility
+
+- The tap button can now be activated with VoiceOver. It could be reached and was described correctly, but activating it did nothing, so the app's one control was unusable without a mouse
+- The tap button reports the running total as its value, so each tap is spoken back rather than leaving the last figure standing
+- The chart describes itself in one sentence, covering how many taps over how many days, how many of those days had any, the best day and today. It previously read out every bar in turn, which at the longer ranges meant up to 365 fragments in a row
+- Each row in the day list is announced as one item, a date and its total, instead of the date, the "today" marker and the number arriving as three unrelated pieces
+- The date at the top of the popover is announced as one item rather than two halves
+
 ### Changed
 
 - Settings has been rebuilt around a sidebar, with a page per section instead of one long scroll. History has been restyled to match, so the two windows now read as parts of the same app

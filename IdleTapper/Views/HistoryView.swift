@@ -65,6 +65,10 @@ struct HistoryView: View {
             }
             .labelsHidden()
             .pickerStyle(.menu)
+            // No `accessibilityLabel` here on purpose. `labelsHidden()` only
+            // hides the label visually — the "Range" title is still exposed to
+            // VoiceOver, and adding one appends rather than replaces: the
+            // control announced itself as "Range, History range".
             .frame(width: 110)
         }
     }
@@ -166,6 +170,16 @@ struct HistoryView: View {
                 .monospacedDigit()
         }
         .padding(.vertical, DesignTokens.Spacing.small)
+        // A row is one fact — a date and its total. Left uncombined it is three
+        // stops (date, the "TODAY" badge, the number), and the number arrives
+        // detached from the day it belongs to.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            bar.isToday
+                ? "Today, \(bar.dayStart.formatted(date: .complete, time: .omitted))"
+                : bar.dayStart.formatted(date: .complete, time: .omitted)
+        )
+        .accessibilityValue("\(bar.tapCount.formatted()) taps")
     }
 
     private var emptyState: some View {
