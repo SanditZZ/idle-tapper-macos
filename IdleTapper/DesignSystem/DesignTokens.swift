@@ -70,7 +70,19 @@ enum DesignTokens {
         static let monospacedDigitsSmall = Font.system(size: 11, design: .monospaced)
 
         /// Uppercase label above a statistic (10px, semibold).
+        ///
+        /// Only ever rendered through `StatTile`, which uppercases it. For a
+        /// sentence-case heading introducing a section, use `sectionLabel`.
         static let statLabel = Font.system(size: 10, weight: .semibold)
+
+        /// Heading introducing a section of a panel, e.g. "Today" (11px, semibold).
+        ///
+        /// Deliberately not `statLabel`. The popover used that token for both
+        /// "Today" and the `ALL TIME` / `BEST DAY` captions beside it, so one
+        /// token produced small uppercase captions in one place and sentence
+        /// case in another — the same name meaning two different treatments.
+        /// A point larger, because these headings are read rather than scanned.
+        static let sectionLabel = Font.system(size: 11, weight: .semibold)
     }
 
     // MARK: - Spacing
@@ -181,6 +193,32 @@ enum DesignTokens {
         /// Height of the 7-day sparkline.
         static let sparklineHeight: CGFloat = 36
 
+        /// Height of the sparkline when it is the History window's main chart.
+        static let historyChartHeight: CGFloat = 90
+
+        /// Thickness of the chart's baseline rule.
+        static let chartBaselineThickness: CGFloat = 1
+
+        /// Shortest a bar may be drawn when the day it represents has taps.
+        ///
+        /// One tap against a peak of a few thousand rounds to a fraction of a
+        /// point and would disappear entirely, so a real day would read as an
+        /// empty one. This floor only ever applies to a day that has taps — a
+        /// zero day draws no bar at all and is represented by the baseline.
+        static let minimumBarHeight: CGFloat = 2
+
+        /// Height of one row in the History window's day list, including the
+        /// divider under it. Used to size the list to its content — see
+        /// `HistoryLayout.listHeight(rowCount:rowHeight:)`.
+        static let historyRowHeight: CGFloat = 33
+
+        /// Height reserved for the History window's "no taps yet" placeholder.
+        ///
+        /// The list no longer stretches to fill the window, so the empty state
+        /// needs a height of its own or it collapses to the height of its own
+        /// text and the card round it shrinks to a strip.
+        static let historyEmptyStateHeight: CGFloat = 150
+
         /// Size the History window opens at.
         ///
         /// 560 rather than 520: at 520 the five stat tiles each got about 82pt,
@@ -222,11 +260,16 @@ enum DesignTokens {
         /// broken even when scrolling works, which is why this is measured
         /// against the tallest page rather than guessed.
         ///
-        /// 620 is that measurement: at 540 the Data page opened with its
-        /// "Delete All History…" button cut off by the window's own edge, which
-        /// is both the ugliest and the most alarming thing on the page to
-        /// half-show. Data is the tallest page, so it sets the height.
-        static let settingsWindowSize = CGSize(width: 720, height: 620)
+        /// 700 is that measurement, and **General** is what it is measured
+        /// against. Data used to be the tallest page and set 620; folding the
+        /// menu bar picker into General made General taller than Data, and at
+        /// 620 it opened with "Restore Defaults" cut off by the window's own
+        /// edge — the same failure Data had at 540, in a new place.
+        ///
+        /// So: whenever a card moves between pages, re-measure. The height is a
+        /// property of the tallest page, not a number that stays true because it
+        /// was true once.
+        static let settingsWindowSize = CGSize(width: 720, height: 700)
 
         /// Smallest Settings window.
         ///

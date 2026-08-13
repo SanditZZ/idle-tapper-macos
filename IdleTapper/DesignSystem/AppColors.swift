@@ -76,9 +76,6 @@ enum AppColors {
     /// Destructive control while pressed.
     static let destructiveFillPressed = Color.red.opacity(0.26)
 
-    /// Background of an inactive bar in the sparkline.
-    static let trackBackground = Color.primary.opacity(0.08)
-
     // MARK: - Brand
 
     /// Primary action color, driven by the asset catalog accent color.
@@ -145,13 +142,19 @@ enum AppColors {
     /// Bar color for today in the sparkline — the emphasised bar.
     static let barToday = Color.accentColor
 
-    /// Bar color for a day with zero taps.
+    /// The chart's baseline rule.
     ///
-    /// At the previous 0.10 these measured 1.2:1 and were invisible rather than
-    /// subtle, which defeats the point of drawing them — they exist so the
-    /// timeline stays continuous and a gap reads as a gap. Still deliberately
-    /// quiet: an empty day should never compete with a real one.
-    static let barEmpty = Color.primary.opacity(0.28)
+    /// This replaced a per-day "empty bar". A zero day used to be drawn as its
+    /// own 2pt stub so the timeline stayed continuous, which reads fine for one
+    /// gap and badly for many: over a 30-day range with taps on two days, the
+    /// other 28 stubs lined up into what looked like a dashed axis rule drawn
+    /// across the card. The emptier the history, the more the chart looked
+    /// broken — worst exactly when a user is new.
+    ///
+    /// One continuous rule says "this is the baseline" deliberately, and a day
+    /// with no taps simply contributes no bar. Quiet enough that it never
+    /// competes with a real bar, but not so faint it vanishes in light mode.
+    static let chartBaseline = Color.primary.opacity(0.14)
 
     // MARK: - Helpers
 
