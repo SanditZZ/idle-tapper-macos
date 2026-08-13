@@ -62,4 +62,33 @@ enum TestSupport {
             tapCount: count
         )
     }
+
+    // MARK: - Preferences
+
+    /// A `UserDefaults` suite of its own, so a settings test cannot read or
+    /// write the real app's preferences.
+    ///
+    /// This matters more than it looks: `AppSettings` defaults to
+    /// `UserDefaults.standard`, and a test that took that default would edit the
+    /// preferences of the copy of Idle Tapper installed on the machine running
+    /// the suite — `resetToDefaults()` in particular would silently wipe them.
+    ///
+    /// The name is unique per call so tests cannot leak state into each other.
+    static func scratchDefaults(
+        function: StaticString = #function,
+        line: UInt = #line
+    ) -> UserDefaults {
+        let name = "IdleTapperTests.\(function).\(line).\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: name) else {
+            fatalError("Could not create a scratch defaults suite named \(name)")
+        }
+        return defaults
+    }
+
+    /// Discards a scratch suite. Paired with `scratchDefaults()` via `defer`.
+    static func removeScratchDefaults(_ defaults: UserDefaults) {
+        for key in defaults.dictionaryRepresentation().keys {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }
