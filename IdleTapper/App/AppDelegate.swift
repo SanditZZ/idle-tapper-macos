@@ -25,8 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarController = MenuBarController(
             tracker: environment.tracker,
             settings: environment.settings,
-            launchAtLogin: environment.launchAtLogin,
-            updates: environment.updates
+            windowCoordinator: environment.windows
         )
         menuBarController?.install()
 

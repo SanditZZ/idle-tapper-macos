@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- There is now one Settings window rather than two. Opening Settings from the popover or the menu bar item gave a different window than ⌘, did, so the same settings could be open twice at once, in two different-looking windows. ⌘, now opens the same window as everything else
+
 ## [0.3.0] — 2026-08-13
 
 ### Added

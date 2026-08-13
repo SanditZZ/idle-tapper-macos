@@ -41,20 +41,17 @@ final class MenuBarController {
 
     // MARK: - Lifecycle
 
+    /// - Parameter windowCoordinator: Injected rather than built here, because
+    ///   the ⌘, command opens the same windows from outside the menu bar. Two
+    ///   coordinators would mean two Settings windows.
     init(
         tracker: TapTracker,
         settings: AppSettings,
-        launchAtLogin: LaunchAtLoginService,
-        updates: UpdateService
+        windowCoordinator: WindowCoordinator
     ) {
         self.tracker = tracker
         self.settings = settings
-        self.windowCoordinator = WindowCoordinator(
-            tracker: tracker,
-            settings: settings,
-            launchAtLogin: launchAtLogin,
-            updates: updates
-        )
+        self.windowCoordinator = windowCoordinator
     }
 
     /// Create the status item and begin reflecting the tracker's state.
