@@ -11,6 +11,15 @@ import SwiftUI
 struct PopoverContentView: View {
 
     @Bindable var tracker: TapTracker
+    @Bindable var settings: AppSettings
+
+    /// Mirrors `NSWorkspace.shared.accessibilityDisplayShouldReduceMotion`.
+    ///
+    /// Read through the environment rather than from `NSWorkspace` directly:
+    /// it is the same system setting, but SwiftUI already observes it, so a
+    /// change in System Settings reaches an open popover without this view
+    /// owning a notification observer that would have to be torn down.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let onOpenHistory: () -> Void
     let onOpenSettings: () -> Void
@@ -22,6 +31,14 @@ struct PopoverContentView: View {
             header
             counter
             TapButton(action: tracker.tap, todayCount: tracker.todayCount)
+                .overlay { MilestoneBurstView(milestone: celebratedMilestone) }
+                // The burst's field is far larger than the button it is
+                // centred on, so it overlaps the rows below. Without an
+                // explicit z-index those rows would draw over it — the
+                // particles would slide *behind* the stats card on the way
+                // down, which reads as a glitch rather than as depth.
+                .zIndex(1)
+
             statsRow
             sparklineSection
 
@@ -50,6 +67,25 @@ struct PopoverContentView: View {
         // than just the stack. See `AppColors.popoverSurface` for why the
         // popover cannot rely on its own backdrop alone.
         .background(AppColors.popoverSurface)
+        // The milestone burst is drawn in a field taller than the popover, so
+        // that particles are not sliced off mid-flight. This is what keeps the
+        // ones that would have escaped inside the window.
+        .clipped()
+    }
+
+    /// The milestone to celebrate with a burst, if any.
+    ///
+    /// Two independent suppressions, and either is enough. Reduce Motion means
+    /// moving things are a problem in themselves; `showVisualEffects` means the
+    /// user finds this particular one distracting. Neither implies the other,
+    /// so neither is derived from the other.
+    ///
+    /// Only the *burst* is gated. `tracker.activeMilestone` still raises the
+    /// banner below, because that is what says which number was reached and is
+    /// the only part of the celebration a screen reader ever hears.
+    private var celebratedMilestone: Int? {
+        guard settings.showVisualEffects, !reduceMotion else { return nil }
+        return tracker.activeMilestone
     }
 
     // MARK: - Sections

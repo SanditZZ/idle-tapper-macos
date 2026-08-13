@@ -363,6 +363,21 @@ enum DesignTokens {
             /// Maximum spin, in radians per second, applied to the
             /// non-circular particles.
             static let maximumSpin: Double = 6
+
+            /// Width of the area the burst is drawn in, centred on the tap
+            /// button. The popover's own width, so the burst can reach both
+            /// edges and no further.
+            static let fieldWidth: CGFloat = DesignTokens.Layout.popoverWidth
+
+            /// Height of that area.
+            ///
+            /// Far taller than the tap button on purpose. A particle covers up
+            /// to `maximumSpeed / drag` points before drag stops it, and
+            /// gravity carries it further down still; `Canvas` clips to its own
+            /// bounds, so a field sized to the button would slice the burst off
+            /// at the button's edge. The popover clips this in turn, which is
+            /// what actually keeps particles inside the window.
+            static let fieldHeight: CGFloat = 480
         }
     }
 }

@@ -208,6 +208,7 @@ final class MenuBarController {
 
         let content = PopoverContentView(
             tracker: tracker,
+            settings: settings,
             onOpenHistory: { [weak self] in
                 self?.closePopover()
                 self?.windowCoordinator.showHistory()
