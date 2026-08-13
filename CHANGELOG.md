@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- History can now be exported as CSV as well as JSON. Pick the format in the save panel: CSV opens directly in a spreadsheet, JSON keeps the exact data for reading back in
+
+### Fixed
+
+- Exported dates now name the day the taps were recorded. Days are counted from local midnight, but the JSON export wrote them converted to UTC, so anyone outside that zone got a file dated up to a day out — every export before this one is affected
+
 ## [0.2.0] — 2026-08-13
 
 ### Accessibility
