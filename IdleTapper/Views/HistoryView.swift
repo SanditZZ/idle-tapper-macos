@@ -17,14 +17,22 @@ struct HistoryView: View {
     @State private var bars: [DayBar] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardSpacing) {
             header
             summary
             chart
-            Divider().opacity(0.5)
             list
+
+            // Absorbs whatever the cards do not need. Without it the list card
+            // takes the slack and renders its rows above a void.
+            Spacer(minLength: 0)
         }
-        .padding(DesignTokens.Spacing.cardPadding)
+        .padding(.horizontal, DesignTokens.Spacing.contentPadding)
+        .padding(.bottom, DesignTokens.Spacing.contentPadding)
+        // The window draws under its title bar so the background runs the full
+        // height; the header has to start below the traffic lights.
+        .padding(.top, DesignTokens.Layout.titleBarInset)
+        .background(AppColors.windowSurface)
         // The day list scrolls on its own, so the window only needs a floor
         // that keeps the chart and the list both usable — not a floor equal to
         // the size it opens at, which is what stopped it being resized at all.
@@ -42,16 +50,12 @@ struct HistoryView: View {
     // MARK: - Sections
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Tap History")
-                    .font(DesignTokens.Typography.pageTitle)
-                Text("Daily totals, reset at local midnight")
-                    .font(DesignTokens.Typography.pageSubtitle)
-                    .foregroundStyle(AppColors.textSecondary)
-            }
-
-            Spacer()
+        HStack(alignment: .center, spacing: DesignTokens.Spacing.medium) {
+            SettingsPageHeader(
+                title: "Tap History",
+                subtitle: "Daily totals, reset at local midnight",
+                systemImage: "chart.bar.fill"
+            )
 
             Picker("Range", selection: $settings.historyRangeDays) {
                 Text("7 days").tag(7)
@@ -90,8 +94,14 @@ struct HistoryView: View {
                 systemImage: "crown.fill",
                 tint: AppColors.warning
             )
+            // "Daily average" was wrong for what this shows: the figure is
+            // `averagePerActiveDay`, so it divides by the days that have taps,
+            // not by the days in the range. With taps on 2 of 30 days it read
+            // "Daily average 1,899" beside a chart that was empty nearly
+            // everywhere — a number that looked broken because the label
+            // claimed something the maths never did.
             StatTile(
-                label: "Daily average",
+                label: "Avg. active day",
                 value: averageText,
                 systemImage: "chart.line.uptrend.xyaxis"
             )
@@ -100,22 +110,19 @@ struct HistoryView: View {
     }
 
     private var chart: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
-            Text("Last \(settings.historyRangeDays) days")
-                .font(DesignTokens.Typography.sectionTitle)
-                .foregroundStyle(AppColors.textSecondary)
-
+        SettingsCard(title: "Last \(settings.historyRangeDays) days") {
             // Weekday initials become unreadable past a couple of weeks.
             SparklineView(
                 bars: bars,
-                height: 90,
-                showsWeekdayLabels: settings.historyRangeDays <= 14
+                height: DesignTokens.Layout.historyChartHeight,
+                showsWeekdayLabels: settings.historyRangeDays <= 14,
+                showsPeakLabel: true
             )
         }
     }
 
     private var list: some View {
-        Group {
+        SettingsCard(title: "Days with taps") {
             if activeBars.isEmpty {
                 emptyState
             } else {
@@ -127,9 +134,12 @@ struct HistoryView: View {
                         }
                     }
                 }
+                // A maximum, not a fixed height: a short history lets the card
+                // hug its rows, while a long one still exceeds the window and
+                // scrolls. See `HistoryLayout.listHeight(rowCount:rowHeight:)`.
+                .frame(maxHeight: HistoryLayout.listHeight(rowCount: activeBars.count))
             }
         }
-        .frame(maxHeight: .infinity)
     }
 
     private func row(for bar: DayBar) -> some View {
@@ -170,7 +180,10 @@ struct HistoryView: View {
                 .font(DesignTokens.Typography.caption)
                 .foregroundStyle(AppColors.textTertiary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: DesignTokens.Layout.historyEmptyStateHeight
+        )
     }
 
     // MARK: - Calculations

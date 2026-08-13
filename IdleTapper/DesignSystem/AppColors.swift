@@ -36,11 +36,45 @@ enum AppColors {
     /// Card border — deliberately subtle.
     static let cardBorder = Color.primary.opacity(0.08)
 
+    /// Background of a window's content pane, behind the cards.
+    ///
+    /// A real window background rather than a translucent one: cards are
+    /// themselves translucent, and stacking translucency on translucency makes
+    /// their edges disappear into whatever is behind the window.
+    static let windowSurface = Color(nsColor: .windowBackgroundColor)
+
+    /// Fill of the selected row in the settings sidebar.
+    static let selectionFill = Color.accentColor.opacity(0.16)
+
+    /// Fill of a sidebar row under the pointer.
+    static let hoverFill = Color.primary.opacity(0.06)
+
+    /// Hairline divider between regions.
+    static let separator = Color.primary.opacity(0.10)
+
     /// Input field background.
     static let inputBackground = Color.primary.opacity(0.06)
 
-    /// Background of an inactive bar in the sparkline.
-    static let trackBackground = Color.primary.opacity(0.08)
+    // MARK: - Interactive Fills
+
+    /// Resting fill of a bordered control.
+    static let controlFill = Color.primary.opacity(0.06)
+
+    /// The same control under the pointer.
+    static let controlFillHover = Color.primary.opacity(0.10)
+
+    /// The same control while pressed. Deeper than hover, so a press inside a
+    /// hover still reads as a state change rather than as nothing happening.
+    static let controlFillPressed = Color.primary.opacity(0.16)
+
+    /// Resting fill of a destructive control.
+    static let destructiveFill = Color.red.opacity(0.12)
+
+    /// Destructive control under the pointer.
+    static let destructiveFillHover = Color.red.opacity(0.18)
+
+    /// Destructive control while pressed.
+    static let destructiveFillPressed = Color.red.opacity(0.26)
 
     // MARK: - Brand
 
@@ -108,13 +142,19 @@ enum AppColors {
     /// Bar color for today in the sparkline — the emphasised bar.
     static let barToday = Color.accentColor
 
-    /// Bar color for a day with zero taps.
+    /// The chart's baseline rule.
     ///
-    /// At the previous 0.10 these measured 1.2:1 and were invisible rather than
-    /// subtle, which defeats the point of drawing them — they exist so the
-    /// timeline stays continuous and a gap reads as a gap. Still deliberately
-    /// quiet: an empty day should never compete with a real one.
-    static let barEmpty = Color.primary.opacity(0.28)
+    /// This replaced a per-day "empty bar". A zero day used to be drawn as its
+    /// own 2pt stub so the timeline stayed continuous, which reads fine for one
+    /// gap and badly for many: over a 30-day range with taps on two days, the
+    /// other 28 stubs lined up into what looked like a dashed axis rule drawn
+    /// across the card. The emptier the history, the more the chart looked
+    /// broken — worst exactly when a user is new.
+    ///
+    /// One continuous rule says "this is the baseline" deliberately, and a day
+    /// with no taps simply contributes no bar. Quiet enough that it never
+    /// competes with a real bar, but not so faint it vanishes in light mode.
+    static let chartBaseline = Color.primary.opacity(0.14)
 
     // MARK: - Helpers
 

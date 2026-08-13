@@ -48,6 +48,7 @@ final class WindowCoordinator {
             title: "Tap History",
             size: DesignTokens.Layout.historyWindowSize,
             minSize: DesignTokens.Layout.historyWindowMinSize,
+            extendsUnderTitleBar: true,
             content: HistoryView(tracker: tracker, settings: settings)
         )
         historyWindow = window
@@ -67,6 +68,7 @@ final class WindowCoordinator {
             title: "Idle Tapper Settings",
             size: DesignTokens.Layout.settingsWindowSize,
             minSize: DesignTokens.Layout.settingsWindowMinSize,
+            extendsUnderTitleBar: true,
             content: SettingsView(
                 tracker: tracker,
                 settings: settings,
@@ -82,21 +84,50 @@ final class WindowCoordinator {
 
     // MARK: - Helpers
 
+    /// - Parameter extendsUnderTitleBar: Draws content the full height of the
+    ///   window, with a transparent title bar over it. Used by Settings so the
+    ///   sidebar's material runs behind the title bar the way a system sidebar
+    ///   does; a window whose material stops at a grey strip looks like two
+    ///   windows stacked. The content is responsible for insetting itself clear
+    ///   of the traffic lights — see `Layout.titleBarInset`.
     private func makeWindow(
         title: String,
         size: CGSize,
         minSize: CGSize,
+        extendsUnderTitleBar: Bool = false,
         content: some View
     ) -> NSWindow {
+        var styleMask: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .resizable]
+        if extendsUnderTitleBar { styleMask.insert(.fullSizeContentView) }
+
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: size),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: styleMask,
             backing: .buffered,
             defer: false
         )
         window.title = title
-        window.contentViewController = NSHostingController(rootView: content)
+
+        let hosting = NSHostingController(rootView: content)
+        // `NSHostingController` defaults to `.preferredContentSize`, which lets
+        // it push SwiftUI's own fitting size onto the window after the size set
+        // below. Emptying the options keeps the window's size the window's
+        // business; the `.frame(minWidth:idealWidth:…)` in each view still
+        // bounds the layout inside it.
+        //
+        // Defensive rather than a fix for anything observed: the sizes measured
+        // wrong during this redesign because of a stale autosaved frame, not
+        // because of this. It is set anyway so the tokens cannot quietly stop
+        // being what decides a window's size.
+        hosting.sizingOptions = []
+        window.contentViewController = hosting
         window.isReleasedWhenClosed = false
+
+        if extendsUnderTitleBar {
+            window.titlebarAppearsTransparent = true
+            // The title would otherwise sit on top of the sidebar's own list.
+            window.titleVisibility = .hidden
+        }
 
         // Set the floor *before* the autosaved frame is restored, so a frame
         // saved by an older build — one whose window was sized for less
@@ -129,7 +160,17 @@ final class WindowCoordinator {
         // minimum size by the bug described above, and a saved frame beats the
         // default — so without this the fix would never reach anyone who had
         // already opened either window once.
-        window.setFrameAutosaveName("IdleTapper.\(title).3")
+        //
+        // Bumped again to .4 for the sidebar redesign: Settings went from a
+        // 460-wide single column to a 720-wide sidebar layout, and any frame
+        // remembered from .3 would reopen the new layout at the old width.
+        //
+        // And to .5 when the menu bar picker moved onto the General page. That
+        // made General the tallest page and took the window from 620 to 700, so
+        // a frame saved under .4 would reopen it 80pt short with "Restore
+        // Defaults" below the bottom edge — the clipped-on-open failure this
+        // suffix exists to prevent.
+        window.setFrameAutosaveName("IdleTapper.\(title).5")
 
         return window
     }

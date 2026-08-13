@@ -19,16 +19,36 @@ struct SparklineView: View {
     /// Whether to label each bar with its weekday initial.
     var showsWeekdayLabels: Bool = true
 
+    /// Whether to caption the tallest bar with its value.
+    ///
+    /// Off in the popover, where the numbers that matter are already spelled out
+    /// above the chart. On in the History window, where the chart is the main
+    /// content and was otherwise unreadable: the bars carried no reference of
+    /// any kind, so the tallest one could only be valued by cross-checking the
+    /// list underneath it.
+    var showsPeakLabel: Bool = false
+
     private var peak: Int { StatsCalculator.peak(of: bars) }
 
     var body: some View {
-        VStack(spacing: DesignTokens.Spacing.extraSmall) {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.extraSmall) {
+            if showsPeakLabel && peak > 0 {
+                peakCaption
+            }
+
             HStack(alignment: .bottom, spacing: 4) {
                 ForEach(bars) { bar in
                     barShape(for: bar)
                 }
             }
             .frame(height: height)
+            // Behind the bars, so it reads as the line they stand on rather
+            // than as another mark competing with them.
+            .background(alignment: .bottom) {
+                Rectangle()
+                    .fill(AppColors.chartBaseline)
+                    .frame(height: DesignTokens.Layout.chartBaselineThickness)
+            }
 
             if showsWeekdayLabels {
                 HStack(spacing: 4) {
@@ -46,25 +66,38 @@ struct SparklineView: View {
         .accessibilityValue(accessibilitySummary)
     }
 
+    /// Sits in its own row above the bars rather than floating over them: the
+    /// tallest bar reaches the full height by definition, so anything drawn
+    /// inside the plot area would land on top of the very bar it labels.
+    private var peakCaption: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Text("Peak \(peak.formatted())")
+                .font(DesignTokens.Typography.caption)
+                .monospacedDigit()
+                .foregroundStyle(AppColors.textTertiary)
+        }
+        .accessibilityHidden(true)
+    }
+
     // MARK: - Bars
 
     private func barShape(for bar: DayBar) -> some View {
         GeometryReader { geometry in
             let fraction = bar.normalizedHeight(max: peak)
-            let barHeight = max(geometry.size.height * fraction, 2)
+            // A day with no taps draws nothing — the baseline already shows
+            // where it would have stood. See `AppColors.chartBaseline`.
+            let barHeight = bar.tapCount == 0
+                ? 0
+                : max(geometry.size.height * fraction, DesignTokens.Layout.minimumBarHeight)
 
             RoundedRectangle(cornerRadius: DesignTokens.Radius.tiny, style: .continuous)
-                .fill(fill(for: bar))
+                .fill(bar.isToday ? AppColors.barToday : AppColors.barPast)
                 .frame(height: barHeight)
                 .frame(maxHeight: .infinity, alignment: .bottom)
         }
         .frame(maxWidth: .infinity)
         .help(Self.tooltip(for: bar))
-    }
-
-    private func fill(for bar: DayBar) -> Color {
-        if bar.tapCount == 0 { return AppColors.barEmpty }
-        return bar.isToday ? AppColors.barToday : AppColors.barPast
     }
 
     // MARK: - Formatting

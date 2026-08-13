@@ -48,8 +48,8 @@ struct PopoverContentView: View {
     private var header: some View {
         HStack {
             Text("Today")
-                .font(DesignTokens.Typography.statLabel)
-                .foregroundStyle(AppColors.textTertiary)
+                .font(DesignTokens.Typography.sectionLabel)
+                .foregroundStyle(AppColors.textSecondary)
 
             Spacer()
 
@@ -99,8 +99,8 @@ struct PopoverContentView: View {
     private var sparklineSection: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.small) {
             Text("Last \(TapTracker.sparklineDayCount) days")
-                .font(DesignTokens.Typography.statLabel)
-                .foregroundStyle(AppColors.textTertiary)
+                .font(DesignTokens.Typography.sectionLabel)
+                .foregroundStyle(AppColors.textSecondary)
 
             SparklineView(bars: tracker.recentBars)
         }
