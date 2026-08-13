@@ -21,6 +21,16 @@ struct TapButton: View {
     /// Label shown in the centre of the button.
     var title: String = "TAP"
 
+    /// Today's total, announced as the button's value.
+    ///
+    /// Deliberately the *value* rather than part of the label. VoiceOver
+    /// re-reads the value of the element it is focused on when that value
+    /// changes, so activating the button says the new total — which is the whole
+    /// feedback loop of the app, and the one thing a listener otherwise has no
+    /// way to perceive. Folded into the label it would be read once on focus and
+    /// then be wrong for every tap after.
+    var todayCount: Int?
+
     var height: CGFloat = DesignTokens.Layout.tapButtonHeight
 
     /// Drives the animation. Not the same as the physical press: it is held for
@@ -38,7 +48,29 @@ struct TapButton: View {
     /// Pending delayed release, cancelled if another tap arrives first.
     @State private var releaseTask: Task<Void, Never>?
 
+    // Split from `body` only because the whole chain in one expression exceeds
+    // what the type-checker will solve in reasonable time.
     var body: some View {
+        surface
+            .frame(height: height)
+            .scaleEffect(isPressed ? DesignTokens.Motion.tapPressedScale : 1)
+            .animation(DesignTokens.Motion.tapPress, value: isPressed)
+            .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.tapButton, style: .continuous))
+            .gesture(pressGesture)
+            .onDisappear { releaseTask?.cancel() }
+            .accessibilityElement()
+            .accessibilityLabel("Tap")
+            .accessibilityValue(accessibilityValue)
+            .accessibilityHint("Adds one tap to today's total")
+            .accessibilityAddTraits(.isButton)
+            // The press is driven by a `DragGesture`, which VoiceOver cannot
+            // perform: without this the button is reachable and correctly
+            // announced but genuinely cannot be activated, which is a worse
+            // failure than being unlabelled.
+            .accessibilityAction { action() }
+    }
+
+    private var surface: some View {
         RoundedRectangle(cornerRadius: DesignTokens.Radius.tapButton, style: .continuous)
             .fill(isPressed ? AppColors.tapButtonPressedFill : AppColors.tapButtonFill)
             .overlay {
@@ -54,16 +86,11 @@ struct TapButton: View {
                     .foregroundStyle(AppColors.tapButtonLabel)
                     .scaleEffect(isPressed ? 0.96 : 1)
             }
-            .frame(height: height)
-            .scaleEffect(isPressed ? DesignTokens.Motion.tapPressedScale : 1)
-            .animation(DesignTokens.Motion.tapPress, value: isPressed)
-            .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.tapButton, style: .continuous))
-            .gesture(pressGesture)
-            .onDisappear { releaseTask?.cancel() }
-            .accessibilityElement()
-            .accessibilityLabel("Tap")
-            .accessibilityHint("Adds one tap to today's total")
-            .accessibilityAddTraits(.isButton)
+    }
+
+    private var accessibilityValue: String {
+        guard let todayCount else { return "" }
+        return "\(todayCount.formatted()) today"
     }
 
     // MARK: - Gesture
