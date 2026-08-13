@@ -176,11 +176,22 @@ final class TapTracker {
     ///
     /// Deliberately not the raw SQLite store: that schema is SwiftData's
     /// private implementation detail, whereas this is a stable, portable format.
+    ///
+    /// Dates carry the recording zone's offset rather than being converted to
+    /// UTC. `JSONEncoder`'s stock `.iso8601` strategy does convert, and since
+    /// `dayStart` is *local* midnight that pushed the date part onto the
+    /// neighbouring day for every user not on UTC — see `ExportDateFormat`.
     func exportJSON() throws -> Data {
         let history = try repository.allDays()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
+
+        let timeZone = calendar.timeZone
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(ExportDateFormat.iso8601(date, timeZone: timeZone))
+        }
+
         return try encoder.encode(history)
     }
 
