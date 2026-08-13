@@ -22,6 +22,10 @@ struct HistoryView: View {
             summary
             chart
             list
+
+            // Absorbs whatever the cards do not need. Without it the list card
+            // takes the slack and renders its rows above a void.
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, DesignTokens.Spacing.contentPadding)
         .padding(.bottom, DesignTokens.Spacing.contentPadding)
@@ -90,8 +94,14 @@ struct HistoryView: View {
                 systemImage: "crown.fill",
                 tint: AppColors.warning
             )
+            // "Daily average" was wrong for what this shows: the figure is
+            // `averagePerActiveDay`, so it divides by the days that have taps,
+            // not by the days in the range. With taps on 2 of 30 days it read
+            // "Daily average 1,899" beside a chart that was empty nearly
+            // everywhere — a number that looked broken because the label
+            // claimed something the maths never did.
             StatTile(
-                label: "Daily average",
+                label: "Avg. active day",
                 value: averageText,
                 systemImage: "chart.line.uptrend.xyaxis"
             )
@@ -104,8 +114,9 @@ struct HistoryView: View {
             // Weekday initials become unreadable past a couple of weeks.
             SparklineView(
                 bars: bars,
-                height: 90,
-                showsWeekdayLabels: settings.historyRangeDays <= 14
+                height: DesignTokens.Layout.historyChartHeight,
+                showsWeekdayLabels: settings.historyRangeDays <= 14,
+                showsPeakLabel: true
             )
         }
     }
@@ -123,9 +134,12 @@ struct HistoryView: View {
                         }
                     }
                 }
+                // A maximum, not a fixed height: a short history lets the card
+                // hug its rows, while a long one still exceeds the window and
+                // scrolls. See `HistoryLayout.listHeight(rowCount:rowHeight:)`.
+                .frame(maxHeight: HistoryLayout.listHeight(rowCount: activeBars.count))
             }
         }
-        .frame(maxHeight: .infinity)
     }
 
     private func row(for bar: DayBar) -> some View {
@@ -166,7 +180,10 @@ struct HistoryView: View {
                 .font(DesignTokens.Typography.caption)
                 .foregroundStyle(AppColors.textTertiary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: DesignTokens.Layout.historyEmptyStateHeight
+        )
     }
 
     // MARK: - Calculations
