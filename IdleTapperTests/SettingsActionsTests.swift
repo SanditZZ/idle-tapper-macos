@@ -20,10 +20,15 @@ struct ExportHistoryTests {
 
     /// Seeds through the repository rather than the tracker: `tap()` only ever
     /// records *now*, and these cases need specific days.
+    ///
+    /// The calendar is overridable because a UTC one hides every time-zone bug
+    /// in the export by construction — see `usesTheRecordingZone` below.
     private func makeTracker(
         defaults: UserDefaults,
-        seed: [(day: Date, count: Int)] = []
+        seed: [(day: Date, count: Int)] = [],
+        calendar overrideCalendar: Calendar? = nil
     ) throws -> TapTracker {
+        let calendar = overrideCalendar ?? self.calendar
         let container = try ModelContainerFactory.makeInMemory()
         let repository = SwiftDataTapRepository(
             container: container,
@@ -97,6 +102,73 @@ struct ExportHistoryTests {
         let text = String(decoding: try tracker.exportJSON(), as: UTF8.self)
 
         #expect(text.contains("2026-03-15"))
+    }
+
+    /// The skew that shipped unnoticed in every release up to 0.2.0.
+    ///
+    /// `dayStart` is *local* midnight, and `JSONEncoder`'s stock `.iso8601`
+    /// strategy converts to UTC — so on UTC+7 a day the user experienced as the
+    /// 15th was written `2026-03-14T17:00:00Z`. Every existing test passed
+    /// throughout, because they all pin a UTC calendar in which local midnight
+    /// and UTC midnight are the same instant. This one does not.
+    @Test("JSON dates keep the recording zone rather than converting to UTC")
+    func usesTheRecordingZone() throws {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        var bangkok = Calendar(identifier: .gregorian)
+        bangkok.timeZone = TimeZone(identifier: "Asia/Bangkok")!
+        bangkok.locale = Locale(identifier: "en_US_POSIX")
+
+        let tracker = try makeTracker(
+            defaults: defaults,
+            seed: [(TestSupport.date(2026, 3, 15, 10, 0, calendar: bangkok), 1)],
+            calendar: bangkok
+        )
+
+        let text = String(decoding: try tracker.exportJSON(), as: UTF8.self)
+
+        #expect(text.contains("2026-03-15T00:00:00+07:00"))
+        #expect(!text.contains("2026-03-14"))
+    }
+
+    /// The CSV is the sibling of the JSON export, so it has to reach the same
+    /// days through the same repository rather than a path of its own.
+    @Test("Exported CSV carries every recorded day, oldest first")
+    func exportsCSV() throws {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        let day = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+        let tracker = try makeTracker(
+            defaults: defaults,
+            seed: [
+                (day, 7),
+                (calendar.date(byAdding: .day, value: -1, to: day)!, 5),
+            ]
+        )
+
+        let text = String(decoding: try tracker.exportCSV(), as: UTF8.self)
+
+        #expect(text == """
+            date,taps
+            2026-03-14,5
+            2026-03-15,7
+
+            """)
+    }
+
+    /// Same reasoning as the empty JSON export: a file with a header and no
+    /// rows says "no history", an empty one says nothing at all.
+    @Test("Exporting an empty history produces a CSV header, not an empty file")
+    func emptyHistoryExportsCSV() throws {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+        let tracker = try makeTracker(defaults: defaults)
+
+        let text = String(decoding: try tracker.exportCSV(), as: UTF8.self)
+
+        #expect(text == "date,taps\n")
     }
 }
 
