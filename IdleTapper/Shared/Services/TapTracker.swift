@@ -195,6 +195,16 @@ final class TapTracker {
         return try encoder.encode(history)
     }
 
+    /// Export the full history as CSV, for the Settings export action.
+    ///
+    /// The spreadsheet-shaped sibling of `exportJSON()`. Not a round-trippable
+    /// format — it drops nothing today, but JSON is the one to re-import.
+    func exportCSV() throws -> Data {
+        let history = try repository.allDays()
+        let text = HistoryCSV.make(from: history, timeZone: calendar.timeZone)
+        return Data(text.utf8)
+    }
+
     // MARK: - Derived Refresh
 
     private func scheduleDerivedRefresh() {

@@ -131,6 +131,45 @@ struct ExportHistoryTests {
         #expect(text.contains("2026-03-15T00:00:00+07:00"))
         #expect(!text.contains("2026-03-14"))
     }
+
+    /// The CSV is the sibling of the JSON export, so it has to reach the same
+    /// days through the same repository rather than a path of its own.
+    @Test("Exported CSV carries every recorded day, oldest first")
+    func exportsCSV() throws {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        let day = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+        let tracker = try makeTracker(
+            defaults: defaults,
+            seed: [
+                (day, 7),
+                (calendar.date(byAdding: .day, value: -1, to: day)!, 5),
+            ]
+        )
+
+        let text = String(decoding: try tracker.exportCSV(), as: UTF8.self)
+
+        #expect(text == """
+            date,taps
+            2026-03-14,5
+            2026-03-15,7
+
+            """)
+    }
+
+    /// Same reasoning as the empty JSON export: a file with a header and no
+    /// rows says "no history", an empty one says nothing at all.
+    @Test("Exporting an empty history produces a CSV header, not an empty file")
+    func emptyHistoryExportsCSV() throws {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+        let tracker = try makeTracker(defaults: defaults)
+
+        let text = String(decoding: try tracker.exportCSV(), as: UTF8.self)
+
+        #expect(text == "date,taps\n")
+    }
 }
 
 @Suite("Restore defaults")
