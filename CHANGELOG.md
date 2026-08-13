@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Settings has been rebuilt around a sidebar, with a page per section instead of one long scroll. History has been restyled to match, so the two windows now read as parts of the same app
+- Choosing what the menu bar item shows is now a row of previews rather than a list of names: each option draws the item as it would actually look, using your own count. It has also moved onto the General page, where it is found without going looking for it
+- The General page groups launch-at-login and the tap click together instead of giving each its own heading
+- The chart no longer draws a mark for a day with no taps. Those marks lined up into what looked like a dashed line ruled across the chart, which was most misleading when there was least history to show. There is now a single quiet baseline, and a day with no taps simply has no bar
+- The history chart names its tallest day, so a bar can be read without checking it against the list underneath
+- The statistic previously labelled "Daily average" is now "Avg. active day". The figure has not changed: it always averaged over the days that have taps, not over every day in the range, and the old label claimed otherwise
+- The list of days now ends where its rows end, rather than stretching to the bottom of the window and leaving an empty panel beneath the last entry
+- The version is shown in one place, on the About page, instead of also sitting in the sidebar under every other page
+
+### Fixed
+
+- The Settings window opens tall enough for its longest page. Folding the menu bar options into General made that page the longest, and at the previous height it opened with "Restore Defaults" under the bottom edge
+
 ## [0.1.2] — 2026-08-13
 
 ### Fixed
