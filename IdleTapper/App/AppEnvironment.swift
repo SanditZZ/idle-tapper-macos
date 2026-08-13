@@ -36,14 +36,31 @@ final class AppEnvironment {
         var container: ModelContainer?
         var ephemeral = false
 
-        do {
-            container = try ModelContainerFactory.makePersistent()
-        } catch {
+        let storeOverride = Self.storeOverride
+        if case .invalid(let reason) = storeOverride {
+            // Never fall through to the app's own store here. Someone passed
+            // --store-path precisely so the real history would not be written
+            // to; honouring the request badly is worse than not running.
             AppLog.app.error(
-                "[App] Persistent store unavailable, falling back to memory: \(error.localizedDescription, privacy: .public)"
+                "[App] Unusable \(LaunchArguments.storePathFlag, privacy: .public): \(reason, privacy: .public) — refusing the app's own store, history will not be saved"
             )
             container = ModelContainerFactory.makeFallback()
             ephemeral = true
+        } else {
+            if let url = storeOverride.url {
+                AppLog.app.info(
+                    "[App] Store redirected by launch argument to \(url.path, privacy: .public)"
+                )
+            }
+            do {
+                container = try ModelContainerFactory.makePersistent(at: storeOverride.url)
+            } catch {
+                AppLog.app.error(
+                    "[App] Persistent store unavailable, falling back to memory: \(error.localizedDescription, privacy: .public)"
+                )
+                container = ModelContainerFactory.makeFallback()
+                ephemeral = true
+            }
         }
 
         guard let container else {
@@ -65,5 +82,19 @@ final class AppEnvironment {
         self.launchAtLogin.applyFirstRunDefault()
 
         AppLog.app.info("[App] Environment ready (ephemeral: \(ephemeral, privacy: .public))")
+    }
+
+    /// Where this build is willing to keep its database.
+    ///
+    /// Debug builds honour `--store-path`, so UI testing can be driven against
+    /// a disposable store instead of the user's real history. A release build
+    /// always uses the app's own store: nothing an end user is handed should be
+    /// redirectable to another database by whoever launches it.
+    private static var storeOverride: StoreOverride {
+        #if DEBUG
+        return LaunchArguments.storeOverride()
+        #else
+        return .none
+        #endif
     }
 }
