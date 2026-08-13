@@ -119,9 +119,19 @@ final class LaunchAtLoginService {
     /// The overwhelmingly common cause is running a development build from
     /// DerivedData: macOS will not register a login item for an app outside a
     /// normal install location.
-    private static func describe(_ error: any Error, whileEnabling enabling: Bool) -> String {
+    ///
+    /// `isInApplications` is a parameter rather than a direct read of
+    /// `Bundle.main` so this stays a calculation: same inputs, same sentence,
+    /// testable without installing anything. It still defaults to the real
+    /// bundle, so callers are unaffected.
+    /// `nonisolated` because it is a calculation: it touches no state of this
+    /// service, so binding it to the main actor would be inherited noise.
+    nonisolated static func describe(
+        _ error: any Error,
+        whileEnabling enabling: Bool,
+        isInApplications: Bool = Bundle.main.bundlePath.hasPrefix("/Applications")
+    ) -> String {
         let action = enabling ? "enable" : "disable"
-        let isInApplications = Bundle.main.bundlePath.hasPrefix("/Applications")
 
         if enabling, !isInApplications {
             return "Could not \(action) launch at login. Move Idle Tapper to your Applications folder and try again."
