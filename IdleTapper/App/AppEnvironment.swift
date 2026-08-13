@@ -23,6 +23,14 @@ final class AppEnvironment {
     let launchAtLogin: LaunchAtLoginService
     let updates: UpdateService
 
+    /// Owns the auxiliary windows.
+    ///
+    /// Held here rather than inside `MenuBarController` because the menu bar is
+    /// no longer the only thing that opens them: the ⌘, menu command reaches
+    /// this from the `App` scene, and both routes have to arrive at the *same*
+    /// window instance or the app grows a second Settings window.
+    let windows: WindowCoordinator
+
     /// True when the on-disk store could not be opened and history is being
     /// held in memory only. Surfaced in the UI rather than failing silently.
     let isEphemeral: Bool
@@ -76,6 +84,13 @@ final class AppEnvironment {
             repository: SwiftDataTapRepository(container: container),
             settings: settings,
             isEphemeral: ephemeral
+        )
+
+        self.windows = WindowCoordinator(
+            tracker: self.tracker,
+            settings: settings,
+            launchAtLogin: self.launchAtLogin,
+            updates: self.updates
         )
 
         // Ships on; applied once so it never overrides a later opt-out.
