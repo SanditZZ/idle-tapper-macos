@@ -37,7 +37,10 @@ struct DayBar: Equatable, Hashable, Sendable, Identifiable {
     var id: Date { dayStart }
 
     /// Height of this bar relative to the tallest bar in the series, `0...1`.
-    /// Zero-tap days still get a small floor so the bar stays visible.
+    ///
+    /// The floor keeps a real but tiny day from rounding away to nothing. It no
+    /// longer applies to zero-tap days: those draw no bar at all and are carried
+    /// by the chart's baseline instead — see `AppColors.chartBaseline`.
     func normalizedHeight(max maxCount: Int, floor: Double = 0.04) -> Double {
         guard maxCount > 0 else { return floor }
         let ratio = Double(tapCount) / Double(maxCount)
