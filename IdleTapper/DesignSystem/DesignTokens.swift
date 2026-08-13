@@ -302,5 +302,67 @@ enum DesignTokens {
 
         /// Transition for the counter when its value changes.
         static let counterChange = Animation.easeOut(duration: 0.12)
+
+        /// The particle burst played when today's count crosses a milestone.
+        ///
+        /// These sit here rather than beside the maths in `ParticleBurst` so a
+        /// tuning pass — fewer particles, a shorter burst, less gravity — is a
+        /// design change in the design system, not an edit to a tested
+        /// calculation. `ParticleBurst` reads them and stays pure.
+        enum MilestoneBurst {
+
+            /// Particles drawn per burst.
+            ///
+            /// Capped deliberately, and low. The burst fires at exactly the
+            /// moment the user is tapping fastest, so it competes with the tap
+            /// path for frames on whatever GPU the machine has — and in a
+            /// 260pt popover, more than this reads as noise rather than as
+            /// more celebration.
+            static let particleCount = 28
+
+            /// Total length of the burst.
+            ///
+            /// `ParticleBurst` guarantees every particle is fully transparent
+            /// at this point, which is what lets the view stop its draw loop
+            /// here instead of animating forever.
+            static let duration: TimeInterval = 0.9
+
+            /// Fraction of `duration` particles stay fully opaque for before
+            /// they begin fading. Fading from the very first frame makes the
+            /// burst look weak; holding then fading reads as a burst.
+            static let fadeBegins: Double = 0.58
+
+            /// Drawn radius range, in points.
+            static let minimumRadius: CGFloat = 1.6
+            static let maximumRadius: CGFloat = 3.4
+
+            /// Initial speed range, in points per second.
+            static let minimumSpeed: Double = 95
+            static let maximumSpeed: Double = 285
+
+            /// Downward acceleration, in points per second squared.
+            static let gravity: Double = 420
+
+            /// Linear drag coefficient. Without it every particle travels in a
+            /// clean parabola and the burst looks like a fountain; with it they
+            /// shoot out and settle, which is what a burst does.
+            static let drag: Double = 1.8
+
+            /// Angular spread, in radians, centred on straight up.
+            ///
+            /// Just under a full circle, so the burst radiates the way a burst
+            /// does — the narrow wedge left out is the one pointing straight
+            /// down, which is the only direction that would read as the button
+            /// leaking rather than celebrating.
+            static let spread: Double = .pi * 1.9
+
+            /// How far the emission point is scattered around the origin, so
+            /// the particles do not all appear from a single pixel.
+            static let originJitter = CGSize(width: 60, height: 30)
+
+            /// Maximum spin, in radians per second, applied to the
+            /// non-circular particles.
+            static let maximumSpin: Double = 6
+        }
     }
 }
