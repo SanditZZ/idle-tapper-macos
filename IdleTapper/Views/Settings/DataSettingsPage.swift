@@ -4,8 +4,6 @@
 //
 
 import SwiftUI
-import AppKit
-import UniformTypeIdentifiers
 
 /// Where history lives, exporting it, and deleting it.
 struct DataSettingsPage: View {
@@ -112,27 +110,21 @@ struct DataSettingsPage: View {
     /// Export history via a save panel, in whichever format the user picks.
     ///
     /// Either format rather than the raw SQLite store: the store's schema
-    /// belongs to SwiftData and is not a stable thing to hand a user.
-    ///
-    /// Offering two content types is all it takes to get the format popup —
-    /// AppKit builds and manages it, keeps the file name's extension in step
-    /// with the selection, and reports the outcome through the chosen `url`.
-    /// So the extension is the only signal needed to pick the encoder, and no
-    /// separate piece of state has to be kept in sync with the panel.
+    /// belongs to SwiftData and is not a stable thing to hand a user. The panel
+    /// itself lives in `HistoryExportPanel` so this stays a view.
     private func exportHistory() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.json, .commaSeparatedText]
-        panel.nameFieldStringValue = "idle-tapper-history.json"
-        panel.canCreateDirectories = true
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let choice = HistoryExportPanel.run() else { return }
 
         do {
-            let isCSV = url.pathExtension.caseInsensitiveCompare("csv") == .orderedSame
-            let data = try isCSV ? tracker.exportCSV() : tracker.exportJSON()
-            try data.write(to: url, options: .atomic)
-            exportOutcome = .succeeded(fileName: url.lastPathComponent)
-            AppLog.settings.info("[Settings] Exported history as \(isCSV ? "CSV" : "JSON", privacy: .public)")
+            let data = switch choice.format {
+            case .json: try tracker.exportJSON()
+            case .csv: try tracker.exportCSV()
+            }
+            try data.write(to: choice.url, options: .atomic)
+            exportOutcome = .succeeded(fileName: choice.url.lastPathComponent)
+            AppLog.settings.info(
+                "[Settings] Exported history as \(choice.format.fileExtension, privacy: .public)"
+            )
         } catch {
             exportOutcome = .failed(reason: error.localizedDescription)
             AppLog.settings.error(
