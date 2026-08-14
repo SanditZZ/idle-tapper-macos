@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-08-14
+
 ### Added
 
 - Right-clicking the TAP button now counts a tap, just as a left-click does, with the same press animation and the same effect on milestones and achievements. Right-clicking the menu bar icon still opens its menu, and right-clicking anywhere else in the popover still does nothing
@@ -101,7 +103,8 @@ Initial version.
 - App icon generated from the same symbol as the menu bar item, so the two cannot drift apart, via a re-runnable script
 - 64 unit tests across day boundaries, statistics, the repository, menu bar rendering, status item placement, press animation timing, and store migration
 
-[Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/SanditZZ/idle-tapper-macos/compare/v0.2.0...v0.3.0
