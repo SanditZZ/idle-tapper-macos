@@ -3,23 +3,31 @@
     <channel>
         <title>IdleTapper</title>
         <item>
+            <title>0.4.0</title>
+            <pubDate>Fri, 14 Aug 2026 04:43:19 +0000</pubDate>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper-0.4.0.zip" length="2134109" type="application/octet-stream" sparkle:edSignature="xpp71RBuvXY7iEEjx53mNWTwSMLRcX84QvNlZn8JqYohuMg9LXIr2IUV2blKqI0cWpLfLR7aKZlpsqfQFvrBBg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper7-6.delta" sparkle:deltaFrom="6" length="346230" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="GfYWZM355zvlHjfm6VWJLI2XiSJT406BJ6wcvpfPDYAiefe2YEiqV4OOEm2PbL3Q3Zcux+Eyhl31EK8oqiCNBQ=="/>
+                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper7-5.delta" sparkle:deltaFrom="5" length="348914" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="9A4y7MOMC7ZBu7zu/qhKSoYyOoecd7BpnYJWEdgc3z/jjDNHHGgUy5LW5Km+Y/GqHsrtpD2qB8kCSJ6p7JSqBg=="/>
+                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper7-4.delta" sparkle:deltaFrom="4" length="375010" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="OtzoIw8MRQegc7eijseRpcoKg7/vpVSYM/XEnc/eQHx4GVlsKpJjyUESh2VRGaFoE91kDsZzbvu3HG8EyHO8Aw=="/>
+                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper7-3.delta" sparkle:deltaFrom="3" length="492722" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="wqZd4lCWcJ/3UO1pZbx5+FrKKZzj69TlGoLRWEvtR+BiLchMadmXamA+byze1J3NmlYzuMteKbq+HQibM/1cDw=="/>
+                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper7-2.delta" sparkle:deltaFrom="2" length="503022" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="HeMV9b0ZfaV0UdGYBU4sKp/oTaICbF6CKEzwSqr2D0l3b5uPrJxskpddwND15okobR5yZULwGBUxdM0CoEF6CA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.3.1</title>
-            <pubDate>Thu, 13 Aug 2026 11:12:39 +0000</pubDate>
+            <pubDate>Fri, 14 Aug 2026 04:43:17 +0000</pubDate>
             <sparkle:version>6</sparkle:version>
             <sparkle:shortVersionString>0.3.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
             <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper-0.3.1.zip" length="1985299" type="application/octet-stream" sparkle:edSignature="0nBnXOZk7W4SF2KjgOzWiRC4EperRuBO43h6fYjHnyYZGKIIvq/bi3BpnDZYpLO0w8FScpI3pk4W71NCZyP/Dw=="/>
-            <sparkle:deltas>
-                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper6-5.delta" sparkle:deltaFrom="5" length="193214" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="BrqNAAiYiMXtbwFM2q5+VPspaGpeZKMRviSrWyR078DIptGvpmO96yvyCifYsFSlX4i6kXDU/t+CV6fFLMAECg=="/>
-                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper6-4.delta" sparkle:deltaFrom="4" length="243198" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="IoioxChpaQ2XvOGyP5/nDFxaCGsB5R9JncINTfJ5RJ1IwCeV8GXJ0MBFSByZylGleb2eZ633XZoaBI+yRqt2Cg=="/>
-                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper6-3.delta" sparkle:deltaFrom="3" length="375586" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="0rhzNadyA2PTdWl8NKaeYf3NYz26/BzS0wK18Ic/yMCv/Jbl07+keWNJiHP0Rs1aMjEMkL1EbNBH2WiLZi42BA=="/>
-                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper6-2.delta" sparkle:deltaFrom="2" length="383406" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="anahvGggHjQUQpP0Lm1ivLZMlBCqqWdCBvD952jFSTVzhDGoQw1lrPolJcXhl36QzqbdzPUrnmf+TG2JhyI6CA=="/>
-                <enclosure url="https://sanditzz.github.io/idle-tapper-macos/releases/IdleTapper6-1.delta" sparkle:deltaFrom="1" length="384414" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="980240" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6CnPyC19lUhmL73LAP1qFuhTJiV6WhcDYOmjsDjviobdFaL+kkljVdmlbuQG5fl9gR+tMpd5KSVqBbB7kxsSBw=="/>
-            </sparkle:deltas>
         </item>
         <item>
             <title>0.3.0</title>
-            <pubDate>Thu, 13 Aug 2026 11:12:36 +0000</pubDate>
+            <pubDate>Fri, 14 Aug 2026 04:43:17 +0000</pubDate>
             <sparkle:version>5</sparkle:version>
             <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -27,7 +35,7 @@
         </item>
         <item>
             <title>0.2.0</title>
-            <pubDate>Thu, 13 Aug 2026 11:12:36 +0000</pubDate>
+            <pubDate>Fri, 14 Aug 2026 04:43:17 +0000</pubDate>
             <sparkle:version>4</sparkle:version>
             <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -35,7 +43,7 @@
         </item>
         <item>
             <title>0.1.2</title>
-            <pubDate>Thu, 13 Aug 2026 11:12:36 +0000</pubDate>
+            <pubDate>Fri, 14 Aug 2026 04:43:17 +0000</pubDate>
             <sparkle:version>3</sparkle:version>
             <sparkle:shortVersionString>0.1.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -43,7 +51,7 @@
         </item>
         <item>
             <title>0.1.1</title>
-            <pubDate>Thu, 13 Aug 2026 11:12:36 +0000</pubDate>
+            <pubDate>Fri, 14 Aug 2026 04:43:17 +0000</pubDate>
             <sparkle:version>2</sparkle:version>
             <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -51,7 +59,7 @@
         </item>
         <item>
             <title>0.1.0</title>
-            <pubDate>Thu, 13 Aug 2026 11:12:36 +0000</pubDate>
+            <pubDate>Fri, 14 Aug 2026 04:43:17 +0000</pubDate>
             <sparkle:version>1</sparkle:version>
             <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
