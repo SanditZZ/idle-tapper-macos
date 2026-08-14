@@ -57,34 +57,39 @@ Ordered roughly by expected value, highest first.
 
 ## Milestone visual effects
 
-**What:** A particle burst when the day's count crosses a milestone — every 100 taps by default, with the interval configurable. Plus a **"Show visual effects"** toggle in Settings, **default on**, so anyone who finds it distracting can turn it off.
+> **Done.** Crossing a milestone throws a burst of particles out of the tap
+> button — `MilestoneBurstView` drawing `ParticleBurst`, gated on the new
+> `showVisualEffects` preference and on Reduce Motion. What is left is the
+> extensions at the bottom of this entry, not the feature itself.
 
-**Why:** The counter currently gives no sense of occasion. A brief celebration at round numbers is the cheapest way to make a tally feel like a game, and milestones are already the natural rhythm of the thing.
+**What:** A particle burst when the day's count crosses a milestone — every 100 taps.
 
-### Considerations
+**Why:** The counter gave no sense of occasion. A brief celebration at round numbers is the cheapest way to make a tally feel like a game, and milestones are already the natural rhythm of the thing.
 
-**Milestone detection belongs in the calculation layer.** Something like `MilestoneCalculator.crossed(from:to:interval:)`, taking the previous and new counts and returning the milestone reached, if any. Pure and directly testable — and the edge cases genuinely need tests:
+### What was decided, and why
 
-- An increment larger than the interval must not fire several bursts at once, or silently skip the milestone
-- The daily reset takes the count back to zero; crossing 100 the next day is a new milestone, not a repeat
-- Interval changes mid-day must not retroactively fire for counts already passed
-- An interval of zero or a negative number must not divide by zero or loop forever — clamp it, per the project's rule that every default is valid and functional
+**The motion is a calculation, not a simulation.** `ParticleBurst.particles(at:seed:)` (`Shared/Logic/`) solves position in closed form for a given elapsed time — linear drag plus undamped gravity — so the view stores no particle state and a dropped frame cannot change where anything ends up. This is the argument that settled the renderer question below: it is what makes the motion testable at all.
 
-**Respect Reduce Motion — this is not optional.** A burst of moving particles is precisely what `NSWorkspace.shared.accessibilityDisplayShouldReduceMotion` exists to suppress. When it is on, fall back to something static: a colour pulse, a brief label, no motion. Honour it independently of the user's own toggle, since the two mean different things.
+**Renderer: SwiftUI `Canvas` + `TimelineView`,** as this entry originally preferred, but for a firmer reason than "no new framework". `CAEmitterLayer` keeps its particles inside CoreAnimation, where no test can reach them, and would have meant bridging an `NSView` into a popover that can be dismissed out from under it. SpriteKit was never in contention.
 
-**Rendering approach.** In rough order of preference:
+**Popover only — the menu bar item does not acknowledge milestones.** The status item is a *rendered image* at a pinned width; animating it means a timer redrawing that image every frame, which is exactly what the fixed-width guarantee in `CLAUDE.md` §6 exists to prevent. Not worth it for an effect the user is already looking at the popover to see.
 
-- **SwiftUI `Canvas` + `TimelineView`** — no new framework, stays inside the existing view layer, easy to clip to the popover
-- **`CAEmitterLayer`** via an `NSViewRepresentable` — purpose-built for particles and cheap, at the cost of dropping into AppKit
-- **SpriteKit** — capable but far too much machinery for a 260-point-wide popover
+**The burst plays alongside the banner, not instead of it.** The banner carries the number and is the only part a screen reader ever hears, so replacing it would have been an accessibility regression — and it would have left the achievement-unlock banner as an orphaned style.
 
-**Performance is the real constraint.** The effect fires during exactly the moment the user is tapping fastest, and the tap path is already debounced for a reason. The animation must never block or delay the increment, and it must not drop frames on an integrated GPU. Cap the particle count, and make sure a second milestone arriving mid-animation replaces the first cleanly rather than stacking emitters.
+**Reduce Motion falls back to the banner alone,** rather than to a second static effect. There was nothing left to design once the banner was staying. Read through `@Environment(\.accessibilityReduceMotion)` rather than `NSWorkspace` directly: same system setting, but SwiftUI already observes it, so no notification observer has to be owned and torn down. Suppressed independently of `showVisualEffects` — Reduce Motion means moving things are a problem in themselves, the preference means this particular one is distracting, and neither implies the other.
 
-**The popover is small and transient.** Effects must be clipped to its bounds — no particles spilling outside the window — and must tear down immediately if the popover dismisses mid-burst. Anything that outlives its window is a leak.
+**The interval stayed a constant.** `MilestoneCalculator.crossed(from:to:interval:)` already takes it as a parameter, so promoting it to a preference later is cheap — and until someone asks, an option nobody adjusts is just surface area.
 
-**The setting.** A new `showVisualEffects` key in `AppSettings`, defaulting to `true`, alongside the existing preferences. The milestone interval could live there too, though it may be better kept as a constant until there is evidence anyone wants to change it — an option nobody adjusts is just surface area.
+**Teardown came free from `task(id:)`.** A second milestone mid-flight cancels and restarts rather than stacking emitters; dismissing the popover cancels it; no timer to get wrong. The one trap: a cancelled task resuming past its `Task.sleep` will clear the burst its replacement has just started, so it has to check `Task.isCancelled` before clearing.
 
-**Worth deciding early:** whether the effect belongs only in the popover, or whether the menu bar item should also acknowledge a milestone. A menu bar flash is more visible but much more intrusive, and it competes with the fixed-width guarantee the status item currently maintains.
+**Clipping is doubled on purpose.** `Canvas` clips to its own bounds, so the burst is drawn in a field far larger than the tap button or it would be sliced off at the button's edge; the popover then clips that field, which is what actually keeps particles inside the window.
+
+### Still open
+
+- **Reuse the burst for achievement unlocks.** `latestUnlock` already raises a banner beside the milestone one. The same view with a different seed would make the two celebrations one system rather than two styles — this is the most obvious next step.
+- **A preview burst in Settings**, so the "Celebrate milestones" switch demonstrates what it controls instead of describing it.
+- **A milestone sound**, pairing with the existing `playTapSound` preference. Needs its own switch: someone who wants a tap click does not necessarily want a fanfare.
+- **Make the interval a preference** if anyone ever asks. The calculation is already parameterised for it.
 
 ---
 
@@ -120,7 +125,7 @@ Ordered roughly by expected value, highest first.
 - Purchase/upgrade evaluation belongs in the pure calculation layer, the same way achievement evaluation does now — take state in, return the new state, no I/O.
 - Adding these models is additive, the same as `AchievementRecord` was: no `SchemaMigrationPlan` needed unless a change also touches `DayRecord`'s or `AchievementRecord`'s existing stored properties incompatibly.
 
-See also **Milestone visual effects** above — the particle-burst celebration is still unbuilt; the milestone banner that shipped here is deliberately plain (text and an SF Symbol, no motion) and does not replace it.
+See also **Milestone visual effects** above — the particle-burst celebration has since been built, and plays alongside the milestone banner rather than replacing it.
 
 ---
 

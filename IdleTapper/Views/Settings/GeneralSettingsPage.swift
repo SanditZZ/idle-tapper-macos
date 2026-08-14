@@ -47,6 +47,14 @@ struct GeneralSettingsPage: View {
                     description: "A short click each time the counter goes up.",
                     isOn: $settings.playTapSound
                 )
+
+                Divider().opacity(0.3)
+
+                SettingToggle(
+                    "Celebrate milestones",
+                    description: "A burst of colour every \(MilestoneCalculator.defaultInterval) taps. Turning this off keeps the milestone message.",
+                    isOn: $settings.showVisualEffects
+                )
             }
 
             SettingsCard(

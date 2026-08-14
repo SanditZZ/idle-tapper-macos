@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Achievements: nine permanent milestones for lifetime taps, single-day totals, streaks and active days, viewable from a new Achievements window (popover footer, right-click menu). Unlocking one shows a brief banner in the popover
 - Milestones: crossing every 100 taps in a day shows a brief banner in the popover. Unlike achievements, milestones are not persisted, so the same figure can be reached again on a later day
+- Crossing a milestone now throws a short burst of colour out of the tap button. A new "Celebrate milestones" switch on the General settings page turns it off; the milestone message stays either way. The burst is also suppressed on its own whenever macOS Reduce Motion is on
 
 ## [0.3.1] — 2026-08-13
 

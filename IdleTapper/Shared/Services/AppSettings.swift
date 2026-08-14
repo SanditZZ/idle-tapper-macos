@@ -30,6 +30,7 @@ final class AppSettings {
         static let confirmBeforeReset = "confirmBeforeReset"
         static let playTapSound = "playTapSound"
         static let suppressHiddenIconNotice = "suppressHiddenIconNotice"
+        static let showVisualEffects = "showVisualEffects"
     }
 
     // MARK: - Data
@@ -72,6 +73,19 @@ final class AppSettings {
         didSet { defaults.set(suppressHiddenIconNotice, forKey: Key.suppressHiddenIconNotice) }
     }
 
+    /// Whether crossing a milestone plays a particle burst.
+    ///
+    /// Only the celebration is optional — the milestone banner is not, because
+    /// it is what says which number was reached and is the only part of this a
+    /// screen reader ever hears.
+    ///
+    /// Separate from the system's Reduce Motion setting on purpose: that one
+    /// means "moving things make me unwell", this one means "I find it
+    /// distracting". Either suppresses the burst, and neither implies the other.
+    var showVisualEffects: Bool {
+        didSet { defaults.set(showVisualEffects, forKey: Key.showVisualEffects) }
+    }
+
     // MARK: - Lifecycle
 
     init(defaults: UserDefaults = .standard) {
@@ -90,6 +104,7 @@ final class AppSettings {
         self.playTapSound = defaults.object(forKey: Key.playTapSound) as? Bool ?? false
         self.suppressHiddenIconNotice =
             defaults.object(forKey: Key.suppressHiddenIconNotice) as? Bool ?? false
+        self.showVisualEffects = defaults.object(forKey: Key.showVisualEffects) as? Bool ?? true
     }
 
     // MARK: - Calculations
@@ -110,6 +125,7 @@ final class AppSettings {
         confirmBeforeReset = true
         playTapSound = false
         suppressHiddenIconNotice = false
+        showVisualEffects = true
         AppLog.settings.info("[Settings] Restored defaults")
     }
 }

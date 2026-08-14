@@ -190,6 +190,7 @@ struct RestoreDefaultsTests {
         settings.confirmBeforeReset = false
         settings.playTapSound = true
         settings.suppressHiddenIconNotice = true
+        settings.showVisualEffects = false
 
         settings.resetToDefaults()
 
@@ -198,6 +199,31 @@ struct RestoreDefaultsTests {
         #expect(settings.confirmBeforeReset)
         #expect(!settings.playTapSound)
         #expect(!settings.suppressHiddenIconNotice)
+        #expect(settings.showVisualEffects)
+    }
+
+    /// The one preference that defaults to *on*. A `defaults.bool(forKey:)`
+    /// would have returned `false` for an untouched install and silently
+    /// shipped the feature disabled, which is the failure this guards.
+    @Test("Visual effects are on for a fresh install")
+    func visualEffectsDefaultToOn() {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        #expect(AppSettings(defaults: defaults).showVisualEffects)
+    }
+
+    /// Turning it off has to survive a relaunch, or the burst comes back for
+    /// exactly the user who asked it not to.
+    @Test("Turning visual effects off is persisted")
+    func visualEffectsOffPersists() {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.showVisualEffects = false
+
+        #expect(!AppSettings(defaults: defaults).showVisualEffects)
     }
 
     /// The reset has to reach the store, or it survives only until relaunch.
