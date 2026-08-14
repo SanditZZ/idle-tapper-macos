@@ -77,7 +77,11 @@ enum AchievementCatalog {
             id: .hundredClub,
             title: "Hundred Club",
             detail: "Reach 100 taps all-time.",
-            systemImage: "100.circle.fill",
+            // Not "100.circle.fill": SF Symbols' numbered circles stop at 50,
+            // so that name resolves to nothing and the badge renders blank.
+            // Anything chosen here must also exist on macOS 14, the deployment
+            // target — which rules out newer glyphs like `medal.fill`.
+            systemImage: "number.circle.fill",
             requirement: .allTimeTaps(100)
         ),
         AchievementDefinition(
