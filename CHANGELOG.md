@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Right-clicking the TAP button now counts a tap, just as a left-click does, with the same press animation and the same effect on milestones and achievements. Right-clicking the menu bar icon still opens its menu, and right-clicking anywhere else in the popover still does nothing
+
 ## [0.4.0] — 2026-08-14
 
 ### Added

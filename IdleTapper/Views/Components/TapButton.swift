@@ -57,6 +57,16 @@ struct TapButton: View {
             .animation(DesignTokens.Motion.tapPress, value: isPressed)
             .contentShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.tapButton, style: .continuous))
             .gesture(pressGesture)
+            // Lets a right-click count a tap too, which no SwiftUI gesture can
+            // see. Attached as a background rather than an overlay: SwiftUI
+            // hit-tests an `NSViewRepresentable` as opaque, so in front it wins
+            // the left-click press and the button silently stops counting.
+            // See `SecondaryClickCatcher` — it consumes no other event.
+            //
+            // Applied before the accessibility modifiers so it is absorbed into
+            // the single element they build, rather than appearing beside it as
+            // an unlabelled stop.
+            .background { SecondaryClickCatcher(onSecondaryClick: performSecondaryTap) }
             .onDisappear { releaseTask?.cancel() }
             .accessibilityElement()
             .accessibilityLabel("Tap")
@@ -145,6 +155,25 @@ struct TapButton: View {
             guard !Task.isCancelled else { return }
             release()
         }
+    }
+
+    /// Count a right-click as one complete tap.
+    ///
+    /// Routed through the same `beginPress`/`endPress` pair as the left-click
+    /// rather than calling `action()` directly, so the press animation, the
+    /// minimum hold and everything the action triggers downstream — milestones,
+    /// achievements — all behave identically for both buttons.
+    ///
+    /// The press and the release are run back to back rather than being tied to
+    /// the physical right-button down and up. Holding the right button is not a
+    /// meaningful interaction here, and pairing them would mean a release that
+    /// never arrives — the app losing focus mid-press — leaves
+    /// `isPhysicallyDown` stuck true, which silently swallows *every* later tap.
+    /// `endPress` still holds the animation for its full minimum duration, so
+    /// this looks exactly like a left-click.
+    private func performSecondaryTap() {
+        beginPress()
+        endPress()
     }
 
     private func release() {
