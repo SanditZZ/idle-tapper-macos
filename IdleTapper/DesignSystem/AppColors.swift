@@ -33,8 +33,20 @@ enum AppColors {
     /// Card background — translucent so vibrancy shows through.
     static let cardBackground = Color.primary.opacity(0.04)
 
-    /// Card border — deliberately subtle.
-    static let cardBorder = Color.primary.opacity(0.08)
+    /// Card border.
+    ///
+    /// The previous `Color.primary.opacity(0.08)` was not drawn in either
+    /// appearance: measured against the real window, the content pane ran
+    /// straight into the card fill with no border pixel at all — 236 → 229 in
+    /// light and 50 → 58 in dark. A card that declares a stroke and renders
+    /// none is worse than one that declares nothing, because the next person
+    /// reads the code and believes it.
+    ///
+    /// See `separator` for where these numbers come from. System Settings puts
+    /// its own card stroke 11 levels below its card in light and 37 above it in
+    /// dark — far stronger than a separator, because this edge is what gives a
+    /// card its shape.
+    static let cardBorder = Color.adaptiveCardBorder
 
     /// Background of a window's content pane, behind the cards.
     ///
@@ -49,8 +61,42 @@ enum AppColors {
     /// Fill of a sidebar row under the pointer.
     static let hoverFill = Color.primary.opacity(0.06)
 
-    /// Hairline divider between regions.
-    static let separator = Color.primary.opacity(0.10)
+    /// Hairline between rows inside one surface — a card's settings, the day
+    /// list, the popover's footer. Always drawn through `AppDivider`.
+    ///
+    /// Contrast *against the surface*, not a fixed tone: darker in light,
+    /// lighter in dark, which is how `NSColor.separatorColor` behaves and how
+    /// every rule inside a native window reads.
+    ///
+    /// The values are measured from System Settings rather than derived, the
+    /// same way `adaptiveTextSecondary` was. On its card — 233.9 in light,
+    /// 45.3 in dark — the system's row separator lands at 224.0 and 57.1.
+    /// `separatorColor` itself is too strong for this job at 0.098: it would
+    /// give 211.0 and 65.9, roughly twice the step in both directions.
+    ///
+    /// **Why this is not `Color.primary.opacity(0.10)` any more.** `primary`
+    /// flips to white in dark mode, so that one token recessed a line in light
+    /// and raised a *bright ridge* in dark. The Settings sidebar edge measured
+    /// 62.9 between surfaces of 41.1 and 50.0 — a line lighter than both
+    /// things it divides, which is the opposite of what a separator is for.
+    static let separator = Color.adaptiveSeparator
+
+    /// The seam where two panes meet — the Settings sidebar against the page
+    /// beside it.
+    ///
+    /// Deliberately **not** `separator`, and the distinction is not cosmetic.
+    /// A rule inside a surface takes its contrast from that surface and so
+    /// flips with the appearance; a pane edge is a *recess* and stays dark in
+    /// both. System Settings' own split divider measures 218.9 between panes of
+    /// 231.2 and 237.9 in light, and drops to near black between panes of 74.9
+    /// and 41.3 in dark.
+    ///
+    /// It also has to work when the two panes are close in tone. The sidebar is
+    /// a vibrancy material and the page behind it is not, so their relationship
+    /// depends on the desktop picture: the sidebar measured warm 42/41/39
+    /// against a neutral 50/50/50 page, and a lighter wallpaper moves it the
+    /// other way. A recess reads correctly whichever way that lands.
+    static let paneSeam = Color.adaptivePaneSeam
 
     /// Input field background.
     static let inputBackground = Color.primary.opacity(0.06)
@@ -183,6 +229,15 @@ extension Color {
 
     /// See `AppColors.popoverSurface`.
     static let adaptivePopoverSurface = Color(nsColor: .adaptivePopoverSurface)
+
+    /// See `AppColors.separator`.
+    static let adaptiveSeparator = Color(nsColor: .adaptiveSeparator)
+
+    /// See `AppColors.paneSeam`.
+    static let adaptivePaneSeam = Color(nsColor: .adaptivePaneSeam)
+
+    /// See `AppColors.cardBorder`.
+    static let adaptiveCardBorder = Color(nsColor: .adaptiveCardBorder)
 }
 
 extension NSColor {
@@ -231,6 +286,36 @@ extension NSColor {
         appearance.isDark
             ? NSColor(white: 0.137, alpha: 0.92)
             : NSColor(white: 0.925, alpha: 0.92)
+    }
+
+    /// See `AppColors.separator`.
+    ///
+    /// Alphas rather than tones, so one token holds its *relationship* to
+    /// whatever surface it is drawn on. Solved from the measured targets: on a
+    /// 233.9 card, black at 0.042 gives 224.0; on a 45.3 card, white at 0.056
+    /// gives 57.1. Both land within a level of the system's own separator.
+    static let adaptiveSeparator = NSColor(name: nil) { appearance in
+        appearance.isDark ? NSColor(white: 1.0, alpha: 0.056) : NSColor(white: 0.0, alpha: 0.042)
+    }
+
+    /// See `AppColors.paneSeam`.
+    ///
+    /// Black in both appearances — that is the whole point of the token. Light
+    /// mode needs very little of it, because the panes it sits between are
+    /// already near white; dark mode needs a great deal, because a faint black
+    /// over a dark pane is indistinguishable from the pane.
+    static let adaptivePaneSeam = NSColor(name: nil) { appearance in
+        appearance.isDark ? NSColor(white: 0.0, alpha: 0.72) : NSColor(white: 0.0, alpha: 0.08)
+    }
+
+    /// See `AppColors.cardBorder`.
+    ///
+    /// The asymmetry is real and is the same effect described on
+    /// `adaptiveTextSecondary`: an equal alpha does not buy an equal step in
+    /// both appearances. Solved from the measured native stroke — 11 levels
+    /// below a 233.9 card in light, 37 above a 45.3 one in dark.
+    static let adaptiveCardBorder = NSColor(name: nil) { appearance in
+        appearance.isDark ? NSColor(white: 1.0, alpha: 0.19) : NSColor(white: 0.0, alpha: 0.05)
     }
 }
 

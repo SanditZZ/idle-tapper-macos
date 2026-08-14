@@ -62,7 +62,7 @@ struct PopoverContentView: View {
                 ephemeralBanner
             }
 
-            Divider().opacity(0.5)
+            AppDivider()
             footer
         }
         .padding(DesignTokens.Spacing.popoverPadding)

@@ -134,7 +134,7 @@ struct HistoryView: View {
                     LazyVStack(spacing: 0) {
                         ForEach(activeBars.reversed()) { bar in
                             row(for: bar)
-                            Divider().opacity(0.3)
+                            AppDivider()
                         }
                     }
                 }

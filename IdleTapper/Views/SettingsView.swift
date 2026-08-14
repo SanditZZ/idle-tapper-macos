@@ -25,13 +25,12 @@ struct SettingsView: View {
         HStack(spacing: 0) {
             SettingsSidebar(selection: $selection)
 
-            // An explicit hairline rather than `Divider()`. In dark mode the
-            // sidebar material and the content pane sit close enough in
-            // brightness that the edge between them was doing the whole job of
-            // separating them, and the system divider is the fainter of the two.
-            Rectangle()
-                .fill(AppColors.separator)
-                .frame(width: 1)
+            // A pane seam, not a row separator — see `AppColors.paneSeam`. The
+            // hand-rolled 1pt rule that used to be here was filled with
+            // `separator`, which inverts with the appearance: in dark mode it
+            // drew a line *brighter* than both the sidebar and the page it
+            // divided, which is what made this edge look wrong.
+            AppDivider(role: .paneSeam, axis: .vertical)
 
             VStack(spacing: 0) {
                 detail
@@ -41,7 +40,7 @@ struct SettingsView: View {
                 // user happens to be, so it sits outside the pages rather than
                 // on whichever one they might not be looking at.
                 if let message = tracker.lastErrorMessage {
-                    Divider()
+                    AppDivider()
                     Label(message, systemImage: "exclamationmark.triangle.fill")
                         .font(DesignTokens.Typography.caption)
                         .foregroundStyle(AppColors.error)

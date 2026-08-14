@@ -40,7 +40,7 @@ struct GeneralSettingsPage: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Divider().opacity(0.3)
+                AppDivider()
 
                 SettingToggle(
                     "Play a click when tapping",
@@ -48,7 +48,7 @@ struct GeneralSettingsPage: View {
                     isOn: $settings.playTapSound
                 )
 
-                Divider().opacity(0.3)
+                AppDivider()
 
                 SettingToggle(
                     "Count a right-click as a tap",
@@ -56,7 +56,7 @@ struct GeneralSettingsPage: View {
                     isOn: $settings.rightClickTaps
                 )
 
-                Divider().opacity(0.3)
+                AppDivider()
 
                 SettingToggle(
                     "Celebrate milestones",
