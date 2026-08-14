@@ -30,7 +30,11 @@ struct PopoverContentView: View {
         VStack(spacing: DesignTokens.Spacing.medium) {
             header
             counter
-            TapButton(action: tracker.tap, todayCount: tracker.todayCount)
+            TapButton(
+                action: tracker.tap,
+                todayCount: tracker.todayCount,
+                rightClickCounts: settings.rightClickTaps
+            )
                 .overlay { MilestoneBurstView(milestone: celebratedMilestone) }
                 // The burst's field is far larger than the button it is
                 // centred on, so it overlaps the rows below. Without an

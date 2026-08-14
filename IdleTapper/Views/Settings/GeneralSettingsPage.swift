@@ -51,6 +51,14 @@ struct GeneralSettingsPage: View {
                 Divider().opacity(0.3)
 
                 SettingToggle(
+                    "Count a right-click as a tap",
+                    description: "Right-clicking the tap button adds to the count, the same as a left-click. The menu bar icon's own menu is unaffected.",
+                    isOn: $settings.rightClickTaps
+                )
+
+                Divider().opacity(0.3)
+
+                SettingToggle(
                     "Celebrate milestones",
                     description: "A burst of colour every \(MilestoneCalculator.defaultInterval) taps. Turning this off keeps the milestone message.",
                     isOn: $settings.showVisualEffects

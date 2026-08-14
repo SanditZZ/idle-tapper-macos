@@ -191,6 +191,7 @@ struct RestoreDefaultsTests {
         settings.playTapSound = true
         settings.suppressHiddenIconNotice = true
         settings.showVisualEffects = false
+        settings.rightClickTaps = false
 
         settings.resetToDefaults()
 
@@ -200,6 +201,7 @@ struct RestoreDefaultsTests {
         #expect(!settings.playTapSound)
         #expect(!settings.suppressHiddenIconNotice)
         #expect(settings.showVisualEffects)
+        #expect(settings.rightClickTaps)
     }
 
     /// The one preference that defaults to *on*. A `defaults.bool(forKey:)`
@@ -224,6 +226,30 @@ struct RestoreDefaultsTests {
         settings.showVisualEffects = false
 
         #expect(!AppSettings(defaults: defaults).showVisualEffects)
+    }
+
+    /// The second preference defaulting to *on*, and the same `bool(forKey:)`
+    /// trap: an untouched install would read `false` and ship the feature dead,
+    /// which looks exactly like the right-click not working at all.
+    @Test("Right-click to tap is on for a fresh install")
+    func rightClickTapsDefaultToOn() {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        #expect(AppSettings(defaults: defaults).rightClickTaps)
+    }
+
+    /// Turning it off has to survive a relaunch, or a stray right-click starts
+    /// counting again for exactly the user who asked it not to.
+    @Test("Turning right-click to tap off is persisted")
+    func rightClickTapsOffPersists() {
+        let defaults = TestSupport.scratchDefaults()
+        defer { TestSupport.removeScratchDefaults(defaults) }
+
+        let settings = AppSettings(defaults: defaults)
+        settings.rightClickTaps = false
+
+        #expect(!AppSettings(defaults: defaults).rightClickTaps)
     }
 
     /// The reset has to reach the store, or it survives only until relaunch.
