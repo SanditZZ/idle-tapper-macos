@@ -31,6 +31,7 @@ final class AppSettings {
         static let playTapSound = "playTapSound"
         static let suppressHiddenIconNotice = "suppressHiddenIconNotice"
         static let showVisualEffects = "showVisualEffects"
+        static let rightClickTaps = "rightClickTaps"
     }
 
     // MARK: - Data
@@ -86,6 +87,18 @@ final class AppSettings {
         didSet { defaults.set(showVisualEffects, forKey: Key.showVisualEffects) }
     }
 
+    /// Whether right-clicking the tap button counts a tap.
+    ///
+    /// On by default: the feature adds a way to tap and takes nothing away, so
+    /// the default has to be the working one. Off is for people who right-click
+    /// by habit and do not want a stray press counted.
+    ///
+    /// Turning it off removes the event monitor rather than making it ignore
+    /// events, so nothing is left watching.
+    var rightClickTaps: Bool {
+        didSet { defaults.set(rightClickTaps, forKey: Key.rightClickTaps) }
+    }
+
     // MARK: - Lifecycle
 
     init(defaults: UserDefaults = .standard) {
@@ -105,6 +118,7 @@ final class AppSettings {
         self.suppressHiddenIconNotice =
             defaults.object(forKey: Key.suppressHiddenIconNotice) as? Bool ?? false
         self.showVisualEffects = defaults.object(forKey: Key.showVisualEffects) as? Bool ?? true
+        self.rightClickTaps = defaults.object(forKey: Key.rightClickTaps) as? Bool ?? true
     }
 
     // MARK: - Calculations
@@ -126,6 +140,7 @@ final class AppSettings {
         playTapSound = false
         suppressHiddenIconNotice = false
         showVisualEffects = true
+        rightClickTaps = true
         AppLog.settings.info("[Settings] Restored defaults")
     }
 }

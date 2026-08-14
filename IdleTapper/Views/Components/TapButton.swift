@@ -31,6 +31,13 @@ struct TapButton: View {
     /// then be wrong for every tap after.
     var todayCount: Int?
 
+    /// Whether a right-click on the button also counts a tap.
+    ///
+    /// Defaults to on: it adds a way to tap and takes nothing away, so the
+    /// working behaviour is the right default. When off, the watcher is not
+    /// installed at all rather than installed and ignored.
+    var rightClickCounts: Bool = true
+
     var height: CGFloat = DesignTokens.Layout.tapButtonHeight
 
     /// Drives the animation. Not the same as the physical press: it is held for
@@ -66,7 +73,11 @@ struct TapButton: View {
             // Applied before the accessibility modifiers so it is absorbed into
             // the single element they build, rather than appearing beside it as
             // an unlabelled stop.
-            .background { SecondaryClickCatcher(onSecondaryClick: performSecondaryTap) }
+            .background {
+                if rightClickCounts {
+                    SecondaryClickCatcher(onSecondaryClick: performSecondaryTap)
+                }
+            }
             .onDisappear { releaseTask?.cancel() }
             .accessibilityElement()
             .accessibilityLabel("Tap")
