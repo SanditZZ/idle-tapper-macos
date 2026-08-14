@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The line down the middle of the Settings window, between the sidebar and the page beside it, no longer looks wrong in dark mode. It was drawn brighter than both the sidebar and the page, so it read as a raised ridge rather than the edge where the two meet; it is now a quiet recess, as it already was in light mode
+- Every dividing line in the app now looks the same. The Settings pages, the History day list and the popover each drew theirs at a different strength, so the same kind of line was faint in one window and strong in another. They are now drawn once, from one place, and matched to what macOS uses in its own windows
+- Cards in every window now have the outline they were always meant to have. It was too faint to be drawn at all, in either light or dark mode, so cards ran straight into the background behind them
+
+### Changed
+
+- Dividing lines are now a true hairline on Retina displays rather than a doubled line
+
 ## [0.5.0] — 2026-08-14
 
 ### Added
