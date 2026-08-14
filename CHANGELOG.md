@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Achievements: nine permanent milestones for lifetime taps, single-day totals, streaks and active days, viewable from a new Achievements window (popover footer, right-click menu). Unlocking one shows a brief banner in the popover
+- Milestones: crossing every 100 taps in a day shows a brief banner in the popover. Unlike achievements, milestones are not persisted, so the same figure can be reached again on a later day
+
 ## [0.3.1] — 2026-08-13
 
 ### Fixed

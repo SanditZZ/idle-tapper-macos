@@ -62,6 +62,15 @@ protocol TapRepository: AnyObject {
     /// Writes are normally debounced; call this before the app terminates or
     /// resigns active so nothing in flight is lost.
     func flush() throws
+
+    /// Every achievement unlocked so far, in no particular order.
+    func unlockedAchievements() throws -> [AchievementSnapshot]
+
+    /// Record `id` as unlocked at `date`.
+    ///
+    /// Idempotent: a no-op if `id` is already recorded, so re-evaluating the
+    /// same achievement twice never duplicates a row or throws.
+    func unlockAchievement(_ id: AchievementID, at date: Date) throws
 }
 
 extension TapRepository {

@@ -278,6 +278,16 @@ enum DesignTokens {
         /// exactly how the `contentViewController` sizing bug survived from the
         /// first build until it was measured.
         static let settingsWindowMinSize = CGSize(width: 600, height: 420)
+
+        /// Size the Achievements window opens at.
+        ///
+        /// Wide enough for a two-column card grid at `settingsSidebarWidth`-ish
+        /// card widths without either column's progress bar looking cramped.
+        static let achievementsWindowSize = CGSize(width: 560, height: 620)
+
+        /// Smallest Achievements window. Below this the two-column grid starts
+        /// squeezing a card's title and detail onto the same line as its icon.
+        static let achievementsWindowMinSize = CGSize(width: 460, height: 420)
     }
 
     // MARK: - Animation

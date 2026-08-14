@@ -107,16 +107,20 @@ Ordered roughly by expected value, highest first.
 
 ## Idle-game mechanics
 
-**What:** Upgrades, achievements, currencies, milestones — the things the "idle" in the name implies.
+> **Partly done.** Achievements and milestones shipped: a fixed catalog of nine achievements (`AchievementCatalog`) evaluated against `TapStats` by `AchievementCalculator`, persisted one row per unlock in `AchievementRecord`, plus a per-day, non-persisted milestone banner every 100 taps (`MilestoneCalculator`). What remains is the currency/upgrade economy below — a materially bigger scope, since it needs balancing decisions the achievements did not (what taps buy, at what rate, spent on what).
+
+**What:** Upgrades and currencies — a spendable resource earned from taps, and purchases that change tap value or unlock cosmetics.
 
 **Why:** This is the reason SwiftData was chosen over flat files. Relational data with real queries is exactly where it earns its keep.
 
 **Considerations:**
 
-- New `@Model` types with `@Relationship` links to `DayRecord` or to a new session entity.
-- At that point `#Predicate` and `SortDescriptor` start earning their keep, and the current fetch-all-and-filter approach in `SwiftDataTapRepository` should be revisited. See the note in `CONTRIBUTING.md` about key paths and strict concurrency.
-- Achievement evaluation belongs in the pure calculation layer, taking a history and returning which achievements are unlocked. Keep it out of the persistence layer.
-- A schema change needs a `SchemaMigrationPlan`. Add one *before* the first release that ships new models, not after.
+- New `@Model` types with `@Relationship` links to `DayRecord` or to a new session entity, if a purchase needs to reference when it happened.
+- At that point `#Predicate` and `SortDescriptor` start earning their keep, and the current fetch-all-and-filter approach in `SwiftDataTapRepository` should be revisited — it was still the right call for the achievements table, which holds at most one row per catalog entry, but an economy with a purchase history will not stay that small. See the note in `CONTRIBUTING.md` about key paths and strict concurrency.
+- Purchase/upgrade evaluation belongs in the pure calculation layer, the same way achievement evaluation does now — take state in, return the new state, no I/O.
+- Adding these models is additive, the same as `AchievementRecord` was: no `SchemaMigrationPlan` needed unless a change also touches `DayRecord`'s or `AchievementRecord`'s existing stored properties incompatibly.
+
+See also **Milestone visual effects** above — the particle-burst celebration is still unbuilt; the milestone banner that shipped here is deliberately plain (text and an SF Symbol, no motion) and does not replace it.
 
 ---
 

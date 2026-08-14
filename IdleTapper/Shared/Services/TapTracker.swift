@@ -32,6 +32,18 @@ final class TapTracker {
     /// Bars for the popover sparkline, oldest first.
     private(set) var recentBars: [DayBar] = []
 
+    /// The full achievement catalog with current locked/unlocked state and
+    /// progress. Recomputed alongside `stats`.
+    private(set) var achievementProgress: [AchievementProgress] = []
+
+    /// The achievement most recently unlocked, for a transient popover
+    /// banner. Clears itself after `bannerDuration`.
+    private(set) var latestUnlock: AchievementDefinition?
+
+    /// The milestone most recently crossed today, for a transient popover
+    /// banner. Clears itself after `bannerDuration`.
+    private(set) var activeMilestone: Int?
+
     /// Human-readable description of the last failure, or `nil` when healthy.
     /// Surfaced in the UI so a silent persistence failure cannot go unnoticed.
     private(set) var lastErrorMessage: String?
@@ -52,6 +64,22 @@ final class TapTracker {
     @ObservationIgnored private let derivedDebounce: Duration
     @ObservationIgnored private var pendingDerivedRefresh: Task<Void, Never>?
 
+    /// How long `latestUnlock` / `activeMilestone` stay up before clearing.
+    @ObservationIgnored private let bannerDuration: Duration
+    @ObservationIgnored private var pendingUnlockClear: Task<Void, Never>?
+    @ObservationIgnored private var pendingMilestoneClear: Task<Void, Never>?
+
+    /// Achievements already unlocked, as persisted. This — not a live
+    /// recomputation from `stats` — is the source of truth for what counts as
+    /// unlocked, so an achievement earned once stays earned even if history
+    /// is later deleted. See `SwiftDataTapRepository.deleteAll()`.
+    @ObservationIgnored private var unlockedAchievementIDs: Set<AchievementID> = []
+
+    /// Highest milestone already shown today, kept with the day it applies
+    /// to so a rollover resets it the same way the repository's own record
+    /// cache resets on a new day.
+    @ObservationIgnored private var lastMilestoneDay: (dayStart: Date, highest: Int)?
+
     /// Retains notification tokens and unregisters them automatically.
     @ObservationIgnored private let observers = ObserverBag()
 
@@ -66,6 +94,7 @@ final class TapTracker {
     ///   - isEphemeral: True when the repository is an in-memory fallback.
     ///   - calendar: Calendar for day boundaries. Injectable for tests.
     ///   - derivedDebounce: Quiet period before recomputing statistics.
+    ///   - bannerDuration: How long an unlock/milestone banner stays up.
     ///   - now: Clock, injectable for tests.
     init(
         repository: any TapRepository,
@@ -73,6 +102,7 @@ final class TapTracker {
         isEphemeral: Bool = false,
         calendar: Calendar = .current,
         derivedDebounce: Duration = .milliseconds(400),
+        bannerDuration: Duration = .seconds(4),
         now: @escaping () -> Date = { Date() }
     ) {
         self.repository = repository
@@ -80,6 +110,7 @@ final class TapTracker {
         self.isEphemeral = isEphemeral
         self.calendar = calendar
         self.derivedDebounce = derivedDebounce
+        self.bannerDuration = bannerDuration
         self.now = now
 
         refresh()
@@ -88,6 +119,8 @@ final class TapTracker {
 
     deinit {
         pendingDerivedRefresh?.cancel()
+        pendingUnlockClear?.cancel()
+        pendingMilestoneClear?.cancel()
         // `observers` unregisters itself when released.
     }
 
@@ -98,9 +131,13 @@ final class TapTracker {
     /// Never throws: a failed write must not interrupt the game. The error is
     /// captured for display and the next tap retries.
     func tap() {
+        let tapDate = now()
+        let previousToday = todayCount
+
         do {
-            todayCount = try repository.increment(by: 1, at: now())
+            todayCount = try repository.increment(by: 1, at: tapDate)
             lastErrorMessage = nil
+            evaluateMilestone(previousToday: previousToday, newToday: todayCount, at: tapDate)
             scheduleDerivedRefresh()
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -126,6 +163,16 @@ final class TapTracker {
                 endingOn: currentDate,
                 calendar: calendar
             )
+
+            unlockedAchievementIDs = Set(try repository.unlockedAchievements().map(\.id))
+            evaluateAchievements(at: currentDate)
+            achievementProgress = AchievementCalculator.progress(
+                stats: stats,
+                unlocked: unlockedAchievementIDs
+            )
+
+            resetMilestoneTrackingIfNeeded(at: currentDate)
+
             lastErrorMessage = nil
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -203,6 +250,80 @@ final class TapTracker {
         let history = try repository.allDays()
         let text = HistoryCSV.make(from: history, timeZone: calendar.timeZone)
         return Data(text.utf8)
+    }
+
+    // MARK: - Achievements & Milestones
+
+    /// Persist any achievement newly satisfied by `stats`, and show the
+    /// first one (in catalog order) as a banner.
+    ///
+    /// A refresh that satisfies several achievements at once — for example
+    /// right after a big backfill — still persists every one of them; only
+    /// the banner is limited to one at a time. The rest are already visible
+    /// in the Achievements window with no banner needed.
+    private func evaluateAchievements(at date: Date) {
+        let currentlyMet = AchievementCalculator.unlocked(from: stats)
+        let newlyUnlocked = AchievementCalculator.newlyUnlocked(
+            previously: unlockedAchievementIDs,
+            now: currentlyMet
+        )
+        guard !newlyUnlocked.isEmpty else { return }
+
+        for id in newlyUnlocked {
+            do {
+                try repository.unlockAchievement(id, at: date)
+                unlockedAchievementIDs.insert(id)
+            } catch {
+                lastErrorMessage = error.localizedDescription
+                AppLog.tap.error(
+                    "[Tap] Failed to persist achievement \(id.rawValue, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
+
+        if let definition = AchievementCatalog.all.first(where: { newlyUnlocked.contains($0.id) }) {
+            latestUnlock = definition
+            pendingUnlockClear?.cancel()
+            pendingUnlockClear = Task { @MainActor [weak self] in
+                guard let self else { return }
+                try? await Task.sleep(for: self.bannerDuration)
+                guard !Task.isCancelled else { return }
+                self.latestUnlock = nil
+            }
+        }
+    }
+
+    /// Start a fresh milestone count for a day not seen before, so a rollover
+    /// does not carry yesterday's "already shown" state into today.
+    private func resetMilestoneTrackingIfNeeded(at date: Date) {
+        let todayStart = DayBoundary.dayStart(for: date, calendar: calendar)
+        if lastMilestoneDay?.dayStart != todayStart {
+            lastMilestoneDay = (todayStart, 0)
+        }
+    }
+
+    /// Show a milestone banner if `newToday` crosses one past whatever was
+    /// last shown today.
+    private func evaluateMilestone(previousToday: Int, newToday: Int, at date: Date) {
+        resetMilestoneTrackingIfNeeded(at: date)
+
+        guard let crossed = MilestoneCalculator.crossed(
+            from: previousToday,
+            to: newToday,
+            interval: MilestoneCalculator.defaultInterval
+        ), crossed > (lastMilestoneDay?.highest ?? 0) else { return }
+
+        let todayStart = DayBoundary.dayStart(for: date, calendar: calendar)
+        lastMilestoneDay = (todayStart, crossed)
+
+        activeMilestone = crossed
+        pendingMilestoneClear?.cancel()
+        pendingMilestoneClear = Task { @MainActor [weak self] in
+            guard let self else { return }
+            try? await Task.sleep(for: self.bannerDuration)
+            guard !Task.isCancelled else { return }
+            self.activeMilestone = nil
+        }
     }
 
     // MARK: - Derived Refresh
