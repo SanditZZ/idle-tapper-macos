@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Six more achievements, taking the set from nine to fifteen: Fifty Thousand Club, Marathon Day, Hundred Day Streak, Hundred Days, and two built on your average across active days — Consistent at 100 and Relentless at 500
+- Achievements are now sorted into Bronze, Silver and Gold tiers. The Achievements window is grouped under those headings, each showing how many of its own are unlocked, and an unlocked badge is coloured by its tier so a Gold one is recognisable from the card alone. The banner shown when you unlock one takes its tier's colour too
+- Each unlocked achievement now shows the date it was earned, in place of the plain "Unlocked". Dates are read from what was already recorded, so achievements unlocked in earlier versions show their real date rather than today's
+
+### Changed
+
+- An achievement you had already earned before it existed is granted the moment you open this version, with no banner. Six new achievements arriving at once would otherwise have greeted long-time users with a banner for something they did months ago
+
 ## [0.5.1] — 2026-08-14
 
 ### Fixed
