@@ -68,6 +68,14 @@ enum StatsCalculator {
     /// so any arithmetic in seconds lands a day either side of the truth twice
     /// a year.
     ///
+    /// The range is compared **half-open** by hand rather than with
+    /// `DateInterval.contains(_:)`, which is `start...end` *inclusive of the
+    /// end instant*. A period's `end` is the very instant its successor begins —
+    /// midnight on the 1st of the next month, midnight on the next week's first
+    /// day — and that instant is exactly the `dayStart` of a real recorded day.
+    /// Using `contains` therefore counted the first day of April in March, and
+    /// only on the boundary, which is the one case a casual test would miss.
+    ///
     /// - Returns: Zero when the calendar cannot form the interval, which it
     ///   only fails to do for dates outside the calendar's own range.
     static func total(
@@ -82,7 +90,7 @@ enum StatsCalculator {
         }
 
         return snapshots
-            .filter { interval.contains($0.dayStart) }
+            .filter { $0.dayStart >= interval.start && $0.dayStart < interval.end }
             .reduce(0) { $0 + $1.tapCount }
     }
 
