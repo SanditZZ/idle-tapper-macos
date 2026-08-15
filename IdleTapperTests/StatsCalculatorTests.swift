@@ -54,6 +54,110 @@ struct StatsCalculatorTests {
         #expect(stats.averagePerActiveDay == 20, "A zero day must not drag the average down")
     }
 
+    // MARK: - Calendar periods
+
+    // Every date below is stated outright and checked against a real calendar:
+    // 15 March 2026 is a **Sunday**, 8 March a Sunday, 14 March a Saturday.
+    // The suite's `now` therefore lands on the first day of its own week, which
+    // is what makes the rolling-window and `firstWeekday` cases below sharp.
+
+    @Test("This week is the calendar week, not the last seven days")
+    func weekIsCalendarNotRolling() {
+        // `now` is a Sunday and the fixture week starts on Sunday, so the week
+        // under way is one day old. Yesterday is inside a rolling seven days
+        // and outside this week — precisely the misreading this feature invites.
+        let history = [
+            TestSupport.snapshot(daysAgo: 0, count: 10, from: now, calendar: calendar),
+            TestSupport.snapshot(daysAgo: 1, count: 500, from: now, calendar: calendar),
+            TestSupport.snapshot(daysAgo: 2, count: 500, from: now, calendar: calendar),
+        ]
+
+        let stats = StatsCalculator.stats(from: history, now: now, calendar: calendar)
+
+        #expect(stats.thisWeek == 10, "Saturday belongs to the week that has just ended")
+        #expect(stats.thisMonth == 1010, "All three days are in March, so the month keeps them")
+    }
+
+    @Test("A week keeps its first and last day and drops the days either side")
+    func weekBoundaries() {
+        // The week of Sunday 8 March through Saturday 14 March.
+        let midweek = TestSupport.date(2026, 3, 11, 10, 0, calendar: calendar)
+        let history = [
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 7, calendar: calendar), count: 100, calendar: calendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 8, calendar: calendar), count: 1, calendar: calendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 14, calendar: calendar), count: 2, calendar: calendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 15, calendar: calendar), count: 400, calendar: calendar),
+        ]
+
+        let stats = StatsCalculator.stats(from: history, now: midweek, calendar: calendar)
+
+        #expect(stats.thisWeek == 3, "Sunday and Saturday are in; the Saturday before and Sunday after are not")
+    }
+
+    @Test("A month keeps its first and last day and drops the days either side")
+    func monthBoundaries() {
+        let midMarch = TestSupport.date(2026, 3, 11, 10, 0, calendar: calendar)
+        let history = [
+            TestSupport.snapshot(on: TestSupport.date(2026, 2, 28, calendar: calendar), count: 100, calendar: calendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 1, calendar: calendar), count: 1, calendar: calendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 31, calendar: calendar), count: 2, calendar: calendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 4, 1, calendar: calendar), count: 400, calendar: calendar),
+        ]
+
+        let stats = StatsCalculator.stats(from: history, now: midMarch, calendar: calendar)
+
+        #expect(stats.thisMonth == 3, "The 1st and the 31st are in; 28 February and 1 April are not")
+    }
+
+    @Test("The same day gives a different week total depending on firstWeekday")
+    func weekStartRespectsFirstWeekday() {
+        // Monday 9 March through Sunday 15 March, one tap each.
+        let sunday = TestSupport.weekCalendar(startingOn: 1)
+        let monday = TestSupport.weekCalendar(startingOn: 2)
+        let history = (0..<7).map {
+            TestSupport.snapshot(daysAgo: $0, count: 1, from: now, calendar: sunday)
+        }
+
+        let sundayWeek = StatsCalculator.stats(from: history, now: now, calendar: sunday)
+        let mondayWeek = StatsCalculator.stats(from: history, now: now, calendar: monday)
+
+        #expect(sundayWeek.thisWeek == 1, "A Sunday-based week has only just begun")
+        #expect(
+            mondayWeek.thisWeek == 7,
+            "A Monday-based week ends on this Sunday, so it holds all seven days"
+        )
+        #expect(
+            sundayWeek.thisMonth == mondayWeek.thisMonth,
+            "firstWeekday moves week boundaries only — the month is the same either way"
+        )
+    }
+
+    @Test("A week containing a daylight saving transition keeps exactly its own days")
+    func weekSpanningDaylightSaving() {
+        // US clocks go forward on Sunday 8 March 2026, so that week opens with a
+        // 23-hour day. Counting in seconds rather than in calendar days would
+        // pull Saturday the 14th out of the week, or push the 7th into it.
+        let dstCalendar = TestSupport.newYorkCalendar
+        let midweek = TestSupport.date(2026, 3, 10, 12, 0, calendar: dstCalendar)
+        let history = [
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 7, calendar: dstCalendar), count: 100, calendar: dstCalendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 8, calendar: dstCalendar), count: 1, calendar: dstCalendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 14, calendar: dstCalendar), count: 2, calendar: dstCalendar),
+        ]
+
+        let stats = StatsCalculator.stats(from: history, now: midweek, calendar: dstCalendar)
+
+        #expect(stats.thisWeek == 3, "The short day is still one whole day")
+    }
+
+    @Test("Empty history totals zero rather than nil or a crash")
+    func emptyPeriods() {
+        #expect(StatsCalculator.total(from: [], in: .weekOfYear, containing: now, calendar: calendar) == 0)
+        #expect(StatsCalculator.total(from: [], in: .month, containing: now, calendar: calendar) == 0)
+        #expect(StatsCalculator.stats(from: [], now: now, calendar: calendar).thisWeek == 0)
+        #expect(StatsCalculator.stats(from: [], now: now, calendar: calendar).thisMonth == 0)
+    }
+
     // MARK: - Streaks
 
     @Test("An unbroken run counts every consecutive day including today")

@@ -20,6 +20,8 @@ struct AchievementCalculatorTests {
     ) -> TapStats {
         TapStats(
             today: 0,
+            thisWeek: 0,
+            thisMonth: 0,
             allTime: allTime,
             bestDay: bestDay,
             bestDayDate: nil,
