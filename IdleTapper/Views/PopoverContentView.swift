@@ -206,15 +206,18 @@ struct PopoverContentView: View {
 
     // MARK: - Banners
 
+    /// Coloured by the unlocked achievement's tier rather than by a single
+    /// warning orange, so a gold unlock reads as a bigger event than a bronze
+    /// one in the two seconds the banner is up.
     private func achievementBanner(_ definition: AchievementDefinition) -> some View {
         Label("Achievement unlocked: \(definition.title)", systemImage: "trophy.fill")
             .font(DesignTokens.Typography.caption)
-            .foregroundStyle(AppColors.warning)
+            .foregroundStyle(AppColors.tier(definition.tier))
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(DesignTokens.Spacing.small)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.small)
-                    .fill(AppColors.tint(AppColors.warning))
+                    .fill(AppColors.tint(AppColors.tier(definition.tier)))
             )
             .accessibilityElement(children: .combine)
     }

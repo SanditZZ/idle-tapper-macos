@@ -180,6 +180,27 @@ enum AppColors {
     /// was effectively invisible on a light background.
     static let textTertiary = Color.adaptiveTextTertiary
 
+    // MARK: - Achievement Tiers
+
+    /// Bronze tier — the entry band.
+    static let tierBronze = Color.adaptiveTierBronze
+
+    /// Silver tier.
+    static let tierSilver = Color.adaptiveTierSilver
+
+    /// Gold tier — the hardest band.
+    static let tierGold = Color.adaptiveTierGold
+
+    /// The colour standing for a tier, used for its section heading and for
+    /// the badge of an unlocked achievement in it.
+    static func tier(_ tier: AchievementTier) -> Color {
+        switch tier {
+        case .bronze: tierBronze
+        case .silver: tierSilver
+        case .gold: tierGold
+        }
+    }
+
     // MARK: - Data Visualisation
 
     /// Bar color for a past day in the sparkline.
@@ -238,6 +259,15 @@ extension Color {
 
     /// See `AppColors.cardBorder`.
     static let adaptiveCardBorder = Color(nsColor: .adaptiveCardBorder)
+
+    /// See `AppColors.tierBronze`.
+    static let adaptiveTierBronze = Color(nsColor: .adaptiveTierBronze)
+
+    /// See `AppColors.tierSilver`.
+    static let adaptiveTierSilver = Color(nsColor: .adaptiveTierSilver)
+
+    /// See `AppColors.tierGold`.
+    static let adaptiveTierGold = Color(nsColor: .adaptiveTierGold)
 }
 
 extension NSColor {
@@ -316,6 +346,40 @@ extension NSColor {
     /// below a 233.9 card in light, 37 above a 45.3 one in dark.
     static let adaptiveCardBorder = NSColor(name: nil) { appearance in
         appearance.isDark ? NSColor(white: 1.0, alpha: 0.19) : NSColor(white: 0.0, alpha: 0.05)
+    }
+
+    /// See `AppColors.tierBronze`, `tierSilver` and `tierGold`.
+    ///
+    /// Metallics, not the system palette: bronze and gold are both oranges and
+    /// silver is a grey, so the obvious `.brown` / `.gray` / `.yellow` would
+    /// have put two nearly identical hues on adjacent sections and a third
+    /// that is unreadable as small text in light mode.
+    ///
+    /// Each is given a light and a dark value for the reason set out on
+    /// `adaptiveTextSecondary`: these are rendered as section headings as well
+    /// as badge fills, so both ends have to clear 4.5:1 against the surface
+    /// they sit on. The light values are darkened metallics — gold at its
+    /// natural brightness measures under 3:1 on a light card — and the dark
+    /// ones are lightened, which is also what makes them read as metal rather
+    /// than as flat brown, grey and yellow.
+    static let adaptiveTierBronze = NSColor(name: nil) { appearance in
+        appearance.isDark
+            ? NSColor(srgbRed: 214 / 255, green: 154 / 255, blue: 108 / 255, alpha: 1.0)
+            : NSColor(srgbRed: 138 / 255, green: 74 / 255, blue: 26 / 255, alpha: 1.0)
+    }
+
+    /// See `adaptiveTierBronze`.
+    static let adaptiveTierSilver = NSColor(name: nil) { appearance in
+        appearance.isDark
+            ? NSColor(srgbRed: 190 / 255, green: 198 / 255, blue: 208 / 255, alpha: 1.0)
+            : NSColor(srgbRed: 92 / 255, green: 102 / 255, blue: 112 / 255, alpha: 1.0)
+    }
+
+    /// See `adaptiveTierBronze`.
+    static let adaptiveTierGold = NSColor(name: nil) { appearance in
+        appearance.isDark
+            ? NSColor(srgbRed: 235 / 255, green: 186 / 255, blue: 74 / 255, alpha: 1.0)
+            : NSColor(srgbRed: 138 / 255, green: 97 / 255, blue: 8 / 255, alpha: 1.0)
     }
 }
 

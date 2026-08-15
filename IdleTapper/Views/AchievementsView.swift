@@ -2,9 +2,10 @@
 //  AchievementsView.swift
 //  Idle Tapper — Achievements window
 //
-//  The full catalog, each entry showing its unlocked date or progress toward
-//  it. `tracker.achievementProgress` already carries locked/unlocked state
-//  and current/target figures in catalog order, so this view only renders.
+//  The full catalog, split into tier sections, each entry showing its unlock
+//  date or its progress toward one. `tracker.achievementProgress` already
+//  carries the unlock date, the tier and the current/target figures in catalog
+//  order, so this view only groups and renders.
 //
 
 import SwiftUI
@@ -20,9 +21,11 @@ struct AchievementsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardSpacing) {
+            VStack(alignment: .leading, spacing: DesignTokens.Spacing.section) {
                 header
-                grid
+                ForEach(groups) { group in
+                    tierSection(group)
+                }
             }
             .padding(.horizontal, DesignTokens.Spacing.contentPadding)
             .padding(.bottom, DesignTokens.Spacing.contentPadding)
@@ -49,19 +52,50 @@ struct AchievementsView: View {
         )
     }
 
-    private var grid: some View {
-        LazyVGrid(columns: columns, spacing: DesignTokens.Spacing.cardSpacing) {
-            // Zipped rather than looked up by id: `AchievementCalculator.progress`
-            // already maps the catalog in order, so pairing positionally avoids a
-            // lookup (and a force-unwrap) that could only ever fail if the two
-            // ever drifted apart.
-            ForEach(Array(zip(AchievementCatalog.all, tracker.achievementProgress)), id: \.0.id) { definition, progress in
-                AchievementCard(definition: definition, progress: progress)
+    private func tierSection(_ group: AchievementTierGroup) -> some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Spacing.medium) {
+            tierHeading(group)
+            LazyVGrid(columns: columns, spacing: DesignTokens.Spacing.cardSpacing) {
+                // Looked up by id rather than zipped positionally against the
+                // catalog, which is what this used to do: grouping reorders
+                // the entries into sections, so their positions no longer line
+                // up with `AchievementCatalog.all`.
+                ForEach(group.entries) { progress in
+                    if let definition = AchievementCatalog.byID[progress.id] {
+                        AchievementCard(definition: definition, progress: progress)
+                    }
+                }
             }
         }
     }
 
+    private func tierHeading(_ group: AchievementTierGroup) -> some View {
+        HStack(spacing: DesignTokens.Spacing.small) {
+            Image(systemName: "circle.fill")
+                .font(DesignTokens.Typography.tiny)
+                .foregroundStyle(AppColors.tier(group.tier))
+                .accessibilityHidden(true)
+
+            Text(group.tier.title)
+                .font(DesignTokens.Typography.sectionLabel)
+                .foregroundStyle(AppColors.tier(group.tier))
+
+            Spacer(minLength: DesignTokens.Spacing.small)
+
+            Text("\(group.unlockedCount) of \(group.entries.count)")
+                .font(DesignTokens.Typography.caption)
+                .foregroundStyle(AppColors.textTertiary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(group.tier.title) tier")
+        .accessibilityValue("\(group.unlockedCount) of \(group.entries.count) unlocked")
+    }
+
     // MARK: - Calculations
+
+    private var groups: [AchievementTierGroup] {
+        AchievementCalculator.grouped(tracker.achievementProgress)
+    }
 
     private var unlockedCount: Int {
         tracker.achievementProgress.filter(\.isUnlocked).count
@@ -90,8 +124,8 @@ private struct AchievementCard: View {
                 Spacer(minLength: 0)
             }
 
-            if progress.isUnlocked {
-                Label("Unlocked", systemImage: "checkmark.circle.fill")
+            if let unlockedAt = progress.unlockedAt {
+                Label(unlockedLabel(unlockedAt), systemImage: "checkmark.circle.fill")
                     .font(DesignTokens.Typography.caption)
                     .foregroundStyle(AppColors.success)
             } else {
@@ -106,25 +140,40 @@ private struct AchievementCard: View {
         .appCard(padding: DesignTokens.Spacing.medium)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(definition.title)
-        .accessibilityValue(
-            progress.isUnlocked
-                ? "Unlocked"
-                : "Locked, \(progress.current.formatted()) of \(progress.target.formatted())"
-        )
+        .accessibilityValue(accessibilityValue)
     }
 
     private var icon: some View {
         Image(systemName: definition.systemImage)
             .font(.system(size: 18, weight: .semibold))
-            .foregroundStyle(progress.isUnlocked ? AppColors.accentOnText : AppColors.textTertiary)
+            // Unlocked badges take their tier's colour rather than the accent,
+            // so the tier a card belongs to is legible from the card itself
+            // and not only from the heading it happens to sit under.
+            .foregroundStyle(progress.isUnlocked ? AppColors.tier(definition.tier) : AppColors.textTertiary)
             .frame(width: 28, height: 28)
             .background(
                 Circle().fill(
                     progress.isUnlocked
-                        ? AppColors.tint(AppColors.accent)
+                        ? AppColors.tint(AppColors.tier(definition.tier))
                         : AppColors.tint(AppColors.textTertiary, opacity: 0.08)
                 )
             )
             .accessibilityHidden(true)
+    }
+
+    // MARK: - Calculations
+
+    /// Dates only — an unlock time to the minute is precision nobody asked
+    /// for, and it would wrap the label onto a second line in a card this
+    /// narrow.
+    private func unlockedLabel(_ date: Date) -> String {
+        "Unlocked \(date.formatted(date: .abbreviated, time: .omitted))"
+    }
+
+    private var accessibilityValue: String {
+        if let unlockedAt = progress.unlockedAt {
+            return unlockedLabel(unlockedAt)
+        }
+        return "Locked, \(progress.current.formatted()) of \(progress.target.formatted())"
     }
 }
