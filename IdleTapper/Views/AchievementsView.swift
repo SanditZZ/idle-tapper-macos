@@ -119,28 +119,50 @@ private struct AchievementCard: View {
                     Text(definition.detail)
                         .font(DesignTokens.Typography.caption)
                         .foregroundStyle(AppColors.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        // Space for both lines is held whether or not the
+                        // sentence needs them — see `achievementDetailLines`.
+                        .lineLimit(DesignTokens.Layout.achievementDetailLines, reservesSpace: true)
                 }
                 Spacer(minLength: 0)
             }
 
+            footer
+        }
+        // Every card is the same height by construction: two reserved detail
+        // lines above a reserved footer. `maxHeight` then makes a card fill its
+        // row, so nothing can disagree even if a title ever wraps.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .appCard(padding: DesignTokens.Spacing.medium)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(definition.title)
+        .accessibilityValue(accessibilityValue)
+    }
+
+    /// The unlock date, or the progress toward it, in a zone of fixed height so
+    /// the two states cannot give a card two different sizes.
+    @ViewBuilder
+    private var footer: some View {
+        Group {
             if let unlockedAt = progress.unlockedAt {
                 Label(unlockedLabel(unlockedAt), systemImage: "checkmark.circle.fill")
                     .font(DesignTokens.Typography.caption)
                     .foregroundStyle(AppColors.success)
             } else {
-                ProgressView(value: progress.fraction)
-                    .tint(AppColors.accent)
-                Text("\(progress.current.formatted()) / \(progress.target.formatted())")
-                    .font(DesignTokens.Typography.caption)
-                    .foregroundStyle(AppColors.textTertiary)
+                VStack(alignment: .leading, spacing: DesignTokens.Spacing.extraSmall) {
+                    ProgressView(value: progress.fraction)
+                        .tint(AppColors.accent)
+                    Text("\(progress.current.formatted()) / \(progress.target.formatted())")
+                        .font(DesignTokens.Typography.caption)
+                        .foregroundStyle(AppColors.textTertiary)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appCard(padding: DesignTokens.Spacing.medium)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(definition.title)
-        .accessibilityValue(accessibilityValue)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: DesignTokens.Layout.achievementFooterHeight,
+            maxHeight: DesignTokens.Layout.achievementFooterHeight,
+            alignment: .topLeading
+        )
     }
 
     private var icon: some View {
