@@ -10,10 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The History window now shows this week's and this month's totals alongside the existing statistics. Both are calendar periods rather than rolling windows: "this week" is the week you are in, starting on whichever day your region starts its weeks on, and it resets on that day rather than seven days after your last tap. Both count your whole history, so they stay correct whichever range the picker is set to
+- Six more achievements, taking the set from nine to fifteen: Fifty Thousand Club, Marathon Day, Hundred Day Streak, Hundred Days, and two built on your average across active days — Consistent at 100 and Relentless at 500
+- Achievements are now sorted into Bronze, Silver and Gold tiers. The Achievements window is grouped under those headings, each showing how many of its own are unlocked, and an unlocked badge is coloured by its tier so a Gold one is recognisable from the card alone. The banner shown when you unlock one takes its tier's colour too
+- Each unlocked achievement now shows the date it was earned, in place of the plain "Unlocked". Dates are read from what was already recorded, so achievements unlocked in earlier versions show their real date rather than today's
 
 ### Changed
 
 - The History window's statistics now sit in two rows rather than one. Seven of them in a single row left each one too narrow to read at the window's smallest size
+- An achievement you had already earned before it existed is granted the moment you open this version, with no banner. Six new achievements arriving at once would otherwise have greeted long-time users with a banner for something they did months ago
+- Every achievement card is now the same size, whether it is unlocked or still in progress and however long its description runs. Unlocking one no longer changes the size of its card or moves the cards around it
 
 ## [0.5.1] — 2026-08-14
 

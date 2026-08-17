@@ -40,4 +40,48 @@ struct AchievementCatalogTests {
         let ids = AchievementCatalog.all.map(\.id)
         #expect(Set(ids).count == ids.count)
     }
+
+    @Test("The lookup covers every catalog entry")
+    func lookupCoversCatalog() {
+        #expect(AchievementCatalog.byID.count == AchievementCatalog.all.count)
+        for definition in AchievementCatalog.all {
+            #expect(AchievementCatalog.byID[definition.id]?.title == definition.title)
+        }
+    }
+
+    // MARK: - Tiers
+
+    /// Catalog order is load-bearing twice over: `TapTracker` banners "the
+    /// first newly unlocked in catalog order", and the window renders tier
+    /// sections in tier order. Both agree only while the array is itself
+    /// sorted by tier, so an entry inserted into the wrong block would show
+    /// under one heading and be announced as though it belonged to another.
+    @Test("Tiers never go backwards in catalog order")
+    func tiersAreNonDecreasing() {
+        let tiers = AchievementCatalog.all.map(\.tier)
+        for (earlier, later) in zip(tiers, tiers.dropFirst()) {
+            #expect(earlier <= later, "\(later.title) appears after \(earlier.title) in the catalog")
+        }
+    }
+
+    /// A tier with nothing in it renders as a heading over empty space.
+    @Test("Every tier has at least one achievement")
+    func everyTierIsPopulated() {
+        for tier in AchievementTier.allCases {
+            #expect(
+                AchievementCatalog.all.contains { $0.tier == tier },
+                "No achievement is in the \(tier.title) tier"
+            )
+        }
+    }
+
+    /// The `Comparable` conformance is what `tiersAreNonDecreasing` and the
+    /// window's section order both rest on, and it is derived from
+    /// `allCases` rather than written out.
+    @Test("Tiers order easiest first")
+    func tiersOrderEasiestFirst() {
+        #expect(AchievementTier.allCases == [.bronze, .silver, .gold])
+        #expect(AchievementTier.bronze < AchievementTier.silver)
+        #expect(AchievementTier.silver < AchievementTier.gold)
+    }
 }

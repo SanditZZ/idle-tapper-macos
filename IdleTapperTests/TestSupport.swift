@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import SwiftData
 @testable import IdleTapper
 
 enum TestSupport {
@@ -124,5 +125,76 @@ enum TestSupport {
         for key in defaults.dictionaryRepresentation().keys {
             defaults.removeObject(forKey: key)
         }
+    }
+
+    // MARK: - Clock
+
+    /// A clock a test can move.
+    ///
+    /// `TapTracker` takes its time as `() -> Date`, so a plain pinned date can
+    /// only ever describe one moment. This lets one tracker see two — a
+    /// relaunch a week later, a day rollover — without rebuilding it, which
+    /// would lose the very persistence the test is checking.
+    ///
+    /// A class rather than a struct on purpose: the closure has to observe
+    /// later writes, which a captured value copy cannot.
+    final class MutableClock {
+        var now: Date
+
+        init(_ start: Date) {
+            self.now = start
+        }
+
+        /// Pass this to `makeTracker(now:)`.
+        func read() -> Date { now }
+
+        /// Move the clock forward. Negative intervals are allowed — the app
+        /// has to survive a user setting their system clock backwards.
+        func advance(days: Int, calendar: Calendar) {
+            guard let moved = calendar.date(byAdding: .day, value: days, to: now) else { return }
+            now = moved
+        }
+    }
+
+    // MARK: - Tracker
+
+    /// A `TapTracker` over a real, in-memory SwiftData stack, optionally
+    /// pre-seeded with history.
+    ///
+    /// Seeds through the repository rather than through `tracker.tap()`: a tap
+    /// only ever records *now*, and most cases need specific days.
+    ///
+    /// The calendar is overridable because a UTC one hides every time-zone bug
+    /// by construction — see `ExportHistoryTests.usesTheRecordingZone`.
+    ///
+    /// `now` is what decides both what "today" is and the date an achievement
+    /// unlocked at, so pin it in any test that asserts on either.
+    @MainActor
+    static func makeTracker(
+        defaults: UserDefaults,
+        seed: [(day: Date, count: Int)] = [],
+        calendar: Calendar = TestSupport.utcCalendar,
+        bannerDuration: Duration = .seconds(4),
+        now: @escaping () -> Date = { Date() }
+    ) throws -> TapTracker {
+        let container = try ModelContainerFactory.makeInMemory()
+        let repository = SwiftDataTapRepository(
+            container: container,
+            calendar: calendar,
+            // Effectively disable the debounce so tests drive saves explicitly.
+            saveDebounce: .seconds(60)
+        )
+        for entry in seed {
+            _ = try repository.increment(by: entry.count, at: entry.day)
+        }
+        try repository.flush()
+
+        return TapTracker(
+            repository: repository,
+            settings: AppSettings(defaults: defaults),
+            calendar: calendar,
+            bannerDuration: bannerDuration,
+            now: now
+        )
     }
 }

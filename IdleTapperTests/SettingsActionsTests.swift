@@ -18,32 +18,19 @@ struct ExportHistoryTests {
 
     private let calendar = TestSupport.utcCalendar
 
-    /// Seeds through the repository rather than the tracker: `tap()` only ever
-    /// records *now*, and these cases need specific days.
-    ///
-    /// The calendar is overridable because a UTC one hides every time-zone bug
-    /// in the export by construction — see `usesTheRecordingZone` below.
+    /// Thin wrapper over the shared `TestSupport.makeTracker`, which every
+    /// tracker-backed suite now builds from. Only the calendar handling
+    /// differs: this suite pins one for the whole suite and lets a single
+    /// time-zone case override it — see `usesTheRecordingZone` below.
     private func makeTracker(
         defaults: UserDefaults,
         seed: [(day: Date, count: Int)] = [],
         calendar overrideCalendar: Calendar? = nil
     ) throws -> TapTracker {
-        let calendar = overrideCalendar ?? self.calendar
-        let container = try ModelContainerFactory.makeInMemory()
-        let repository = SwiftDataTapRepository(
-            container: container,
-            calendar: calendar,
-            saveDebounce: .seconds(60)
-        )
-        for entry in seed {
-            _ = try repository.increment(by: entry.count, at: entry.day)
-        }
-        try repository.flush()
-
-        return TapTracker(
-            repository: repository,
-            settings: AppSettings(defaults: defaults),
-            calendar: calendar
+        try TestSupport.makeTracker(
+            defaults: defaults,
+            seed: seed,
+            calendar: overrideCalendar ?? self.calendar
         )
     }
 

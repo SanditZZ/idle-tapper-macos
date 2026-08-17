@@ -112,7 +112,9 @@ Ordered roughly by expected value, highest first.
 
 ## Idle-game mechanics
 
-> **Partly done.** Achievements and milestones shipped: a fixed catalog of nine achievements (`AchievementCatalog`) evaluated against `TapStats` by `AchievementCalculator`, persisted one row per unlock in `AchievementRecord`, plus a per-day, non-persisted milestone banner every 100 taps (`MilestoneCalculator`). What remains is the currency/upgrade economy below — a materially bigger scope, since it needs balancing decisions the achievements did not (what taps buy, at what rate, spent on what).
+> **Partly done.** Achievements and milestones shipped: a fixed catalog of fifteen achievements (`AchievementCatalog`), banded into bronze/silver/gold `AchievementTier`s, evaluated against `TapStats` by `AchievementCalculator`, persisted one row per unlock in `AchievementRecord`, plus a per-day, non-persisted milestone banner every 100 taps (`MilestoneCalculator`). What remains is the currency/upgrade economy below — a materially bigger scope, since it needs balancing decisions the achievements did not (what taps buy, at what rate, spent on what).
+>
+> **Three `TapStats` fields still have no achievement, and should not get one.** `today` is redundant against `bestDay` — `bestDay >= N` becomes true the instant `today >= N`, so the pair would always fire together. `currentStreak` is redundant against `longestStreak` for the same reason, since `longestStreak >= currentStreak` always holds. `bestDayDate` is the wrong shape entirely: a requirement built on a date ("your best day was this week") can stop being true, and an achievement is never revoked. `averagePerActiveDay` was the only one worth adding, and has been.
 
 **What:** Upgrades and currencies — a spendable resource earned from taps, and purchases that change tap value or unlock cosmetics.
 

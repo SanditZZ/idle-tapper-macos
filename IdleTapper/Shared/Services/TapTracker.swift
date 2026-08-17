@@ -54,9 +54,16 @@ final class TapTracker {
 
     // MARK: - Dependencies
 
-    @ObservationIgnored private let repository: any TapRepository
+    /// Not `private`, unlike its neighbours, because `TapTracker+Export.swift`
+    /// is a separate file and Swift's `private` is file-scoped. The export
+    /// moved out when this file reached the size at which it has to be split.
+    @ObservationIgnored let repository: any TapRepository
+
     @ObservationIgnored private let settings: AppSettings
-    @ObservationIgnored private let calendar: Calendar
+
+    /// See `repository` for why this is not `private` either.
+    @ObservationIgnored let calendar: Calendar
+
     @ObservationIgnored private let now: () -> Date
 
     /// Debounce for recomputing derived statistics. Taps update the counter
@@ -69,11 +76,21 @@ final class TapTracker {
     @ObservationIgnored private var pendingUnlockClear: Task<Void, Never>?
     @ObservationIgnored private var pendingMilestoneClear: Task<Void, Never>?
 
-    /// Achievements already unlocked, as persisted. This — not a live
-    /// recomputation from `stats` — is the source of truth for what counts as
-    /// unlocked, so an achievement earned once stays earned even if history
-    /// is later deleted. See `SwiftDataTapRepository.deleteAll()`.
-    @ObservationIgnored private var unlockedAchievementIDs: Set<AchievementID> = []
+    /// Achievements already unlocked, as persisted, keyed to when they were
+    /// earned. This — not a live recomputation from `stats` — is the source of
+    /// truth for what counts as unlocked, so an achievement earned once stays
+    /// earned even if history is later deleted. See
+    /// `SwiftDataTapRepository.deleteAll()`.
+    @ObservationIgnored private var unlockDates: [AchievementID: Date] = [:]
+
+    /// Whether `evaluateAchievements` has run at least once this launch.
+    ///
+    /// The first evaluation happens in `init`, before the user can have
+    /// tapped, so anything newly satisfied then was already true when the app
+    /// opened — a release that adds catalog entries, most often. Those are
+    /// granted silently; a banner celebrating something the user did months
+    /// ago, at the moment they open the app, is noise.
+    @ObservationIgnored private var hasEvaluatedAchievements = false
 
     /// Highest milestone already shown today, kept with the day it applies
     /// to so a rollover resets it the same way the repository's own record
@@ -164,11 +181,11 @@ final class TapTracker {
                 calendar: calendar
             )
 
-            unlockedAchievementIDs = Set(try repository.unlockedAchievements().map(\.id))
+            unlockDates = AchievementCalculator.unlockDates(from: try repository.unlockedAchievements())
             evaluateAchievements(at: currentDate)
             achievementProgress = AchievementCalculator.progress(
                 stats: stats,
-                unlocked: unlockedAchievementIDs
+                unlocked: unlockDates
             )
 
             resetMilestoneTrackingIfNeeded(at: currentDate)
@@ -219,38 +236,7 @@ final class TapTracker {
         }
     }
 
-    /// Export the full history as JSON, for the Settings export action.
-    ///
-    /// Deliberately not the raw SQLite store: that schema is SwiftData's
-    /// private implementation detail, whereas this is a stable, portable format.
-    ///
-    /// Dates carry the recording zone's offset rather than being converted to
-    /// UTC. `JSONEncoder`'s stock `.iso8601` strategy does convert, and since
-    /// `dayStart` is *local* midnight that pushed the date part onto the
-    /// neighbouring day for every user not on UTC — see `ExportDateFormat`.
-    func exportJSON() throws -> Data {
-        let history = try repository.allDays()
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-
-        let timeZone = calendar.timeZone
-        encoder.dateEncodingStrategy = .custom { date, encoder in
-            var container = encoder.singleValueContainer()
-            try container.encode(ExportDateFormat.iso8601(date, timeZone: timeZone))
-        }
-
-        return try encoder.encode(history)
-    }
-
-    /// Export the full history as CSV, for the Settings export action.
-    ///
-    /// The spreadsheet-shaped sibling of `exportJSON()`. Not a round-trippable
-    /// format — it drops nothing today, but JSON is the one to re-import.
-    func exportCSV() throws -> Data {
-        let history = try repository.allDays()
-        let text = HistoryCSV.make(from: history, timeZone: calendar.timeZone)
-        return Data(text.utf8)
-    }
+    // Export lives in `TapTracker+Export.swift`.
 
     // MARK: - Achievements & Milestones
 
@@ -261,10 +247,20 @@ final class TapTracker {
     /// right after a big backfill — still persists every one of them; only
     /// the banner is limited to one at a time. The rest are already visible
     /// in the Achievements window with no banner needed.
+    ///
+    /// The very first evaluation of a launch grants **silently**: see
+    /// `hasEvaluatedAchievements`. The flag is read and set here at the top,
+    /// above the early return, because a launch where nothing is newly
+    /// satisfied is the common case — leaving it below would mean the first
+    /// *real* unlock of the session was mistaken for the initial one and lost
+    /// its banner.
     private func evaluateAchievements(at date: Date) {
+        let isInitialEvaluation = !hasEvaluatedAchievements
+        hasEvaluatedAchievements = true
+
         let currentlyMet = AchievementCalculator.unlocked(from: stats)
         let newlyUnlocked = AchievementCalculator.newlyUnlocked(
-            previously: unlockedAchievementIDs,
+            previously: Set(unlockDates.keys),
             now: currentlyMet
         )
         guard !newlyUnlocked.isEmpty else { return }
@@ -272,13 +268,20 @@ final class TapTracker {
         for id in newlyUnlocked {
             do {
                 try repository.unlockAchievement(id, at: date)
-                unlockedAchievementIDs.insert(id)
+                unlockDates[id] = date
             } catch {
                 lastErrorMessage = error.localizedDescription
                 AppLog.tap.error(
                     "[Tap] Failed to persist achievement \(id.rawValue, privacy: .public): \(error.localizedDescription, privacy: .public)"
                 )
             }
+        }
+
+        guard !isInitialEvaluation else {
+            AppLog.tap.info(
+                "[Tap] Granted \(newlyUnlocked.count, privacy: .public) already-earned achievement(s) on launch, without a banner"
+            )
+            return
         }
 
         if let definition = AchievementCatalog.all.first(where: { newlyUnlocked.contains($0.id) }) {

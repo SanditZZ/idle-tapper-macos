@@ -299,6 +299,22 @@ enum DesignTokens {
         /// Smallest Achievements window. Below this the two-column grid starts
         /// squeezing a card's title and detail onto the same line as its icon.
         static let achievementsWindowMinSize = CGSize(width: 460, height: 420)
+
+        /// Lines reserved for an achievement card's detail line.
+        ///
+        /// Reserved rather than measured: "Record your first tap." takes one
+        /// line and "Tap 1,000 times in a single day." takes two, so a card's
+        /// height would otherwise depend on how its sentence happened to wrap,
+        /// and neighbouring cards would disagree by a line.
+        static let achievementDetailLines = 2
+
+        /// Height reserved for the bottom of an achievement card.
+        ///
+        /// An unlocked card ends in one line — "Unlocked 14 Aug" — while a
+        /// locked one ends in a progress bar above its figures, which is taller.
+        /// Reserving the taller of the two for both keeps every card the same
+        /// height, so unlocking one does not resize it or shift the grid.
+        static let achievementFooterHeight: CGFloat = 28
     }
 
     // MARK: - Animation
