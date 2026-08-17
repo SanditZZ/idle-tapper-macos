@@ -134,20 +134,27 @@ struct StatsCalculatorTests {
 
     @Test("A week containing a daylight saving transition keeps exactly its own days")
     func weekSpanningDaylightSaving() {
-        // US clocks go forward on Sunday 8 March 2026, so that week opens with a
-        // 23-hour day. Counting in seconds rather than in calendar days would
-        // pull Saturday the 14th out of the week, or push the 7th into it.
+        // US clocks go forward on Sunday 8 March 2026, so this week opens with a
+        // 23-hour day and spans seven days in 167 hours.
+        //
+        // 15 March is the day that makes this test bite, and it is here on
+        // purpose. Adding 7 × 86,400 seconds to the week's start lands at 01:00
+        // on the 15th rather than at midnight, so a seconds-based calculation
+        // drags the next week's first day into this one. Without a record on
+        // the 15th the fixture cannot tell the two implementations apart:
+        // measured, both answer 3, and the test passes on the broken one.
         let dstCalendar = TestSupport.newYorkCalendar
         let midweek = TestSupport.date(2026, 3, 10, 12, 0, calendar: dstCalendar)
         let history = [
             TestSupport.snapshot(on: TestSupport.date(2026, 3, 7, calendar: dstCalendar), count: 100, calendar: dstCalendar),
             TestSupport.snapshot(on: TestSupport.date(2026, 3, 8, calendar: dstCalendar), count: 1, calendar: dstCalendar),
             TestSupport.snapshot(on: TestSupport.date(2026, 3, 14, calendar: dstCalendar), count: 2, calendar: dstCalendar),
+            TestSupport.snapshot(on: TestSupport.date(2026, 3, 15, calendar: dstCalendar), count: 400, calendar: dstCalendar),
         ]
 
         let stats = StatsCalculator.stats(from: history, now: midweek, calendar: dstCalendar)
 
-        #expect(stats.thisWeek == 3, "The short day is still one whole day")
+        #expect(stats.thisWeek == 3, "The short day is still one whole day, and the 15th is next week")
     }
 
     @Test("Empty history totals zero rather than nil or a crash")
