@@ -14,10 +14,31 @@ enum TestSupport {
 
     /// A fixed calendar in UTC. Removes time-zone flakiness from day-boundary
     /// assertions; the DST tests opt into a real zone explicitly.
+    ///
+    /// `firstWeekday` is set explicitly, and has to be: assigning `locale` does
+    /// **not** update it, so a week-boundary assertion made against this
+    /// calendar without it would be pinning whatever the machine's region says
+    /// a week starts on — passing here and being wrong for a user in a Monday
+    /// country. Use `weekCalendar(startingOn:)` to vary it deliberately.
     static var utcCalendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC")!
         calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.firstWeekday = 1        // Sunday
+        return calendar
+    }
+
+    /// The UTC calendar with a deliberate week start — 1 is Sunday, 2 Monday.
+    ///
+    /// Week totals are the one statistic whose boundaries move with the user's
+    /// region rather than only with their time zone, so both settings are worth
+    /// covering.
+    ///
+    /// Named apart from `utcCalendar` rather than overloading it: a property and
+    /// a method sharing a base name is legal but reads as a typo at the call site.
+    static func weekCalendar(startingOn firstWeekday: Int) -> Calendar {
+        var calendar = utcCalendar
+        calendar.firstWeekday = firstWeekday
         return calendar
     }
 
@@ -26,6 +47,7 @@ enum TestSupport {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/New_York")!
         calendar.locale = Locale(identifier: "en_US_POSIX")
+        calendar.firstWeekday = 1        // Sunday, as above
         return calendar
     }
 
@@ -60,6 +82,18 @@ enum TestSupport {
     ) -> DaySnapshot {
         DaySnapshot(
             dayStart: DayBoundary.dayStart(daysAgo: daysAgo, from: reference, calendar: calendar),
+            tapCount: count
+        )
+    }
+
+    /// Snapshot for a named calendar day, for tests that state their dates
+    /// outright rather than counting backwards from "now".
+    ///
+    /// Week and month boundaries are easier to read — and to check by eye
+    /// against a calendar — as "7 March" than as "four days ago".
+    static func snapshot(on day: Date, count: Int, calendar: Calendar) -> DaySnapshot {
+        DaySnapshot(
+            dayStart: DayBoundary.dayStart(for: day, calendar: calendar),
             tapCount: count
         )
     }

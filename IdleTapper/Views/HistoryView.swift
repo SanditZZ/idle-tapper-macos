@@ -16,6 +16,13 @@ struct HistoryView: View {
     /// window reappears rather than on every tap.
     @State private var bars: [DayBar] = []
 
+    /// Equal-width columns for the summary tiles. The count — and why it is not
+    /// seven, one per statistic — is in `HistoryLayout.summaryColumnCount`.
+    private let summaryColumns = Array(
+        repeating: GridItem(.flexible(), spacing: DesignTokens.Spacing.medium),
+        count: HistoryLayout.summaryColumnCount
+    )
+
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.cardSpacing) {
             header
@@ -74,11 +81,29 @@ struct HistoryView: View {
     }
 
     private var summary: some View {
-        HStack(spacing: DesignTokens.Spacing.medium) {
+        LazyVGrid(
+            columns: summaryColumns,
+            alignment: .leading,
+            spacing: DesignTokens.Spacing.large
+        ) {
             StatTile(
                 label: "All time",
                 value: tracker.stats.allTime.formatted(),
                 systemImage: "sum"
+            )
+            // Calendar week and calendar month, not the last 7 or 30 days, and
+            // not the selected range either — these come from `tracker.stats`,
+            // which sees the whole history. Deriving them from `bars` would make
+            // the month total silently wrong whenever the picker is on "7 days".
+            StatTile(
+                label: "This week",
+                value: tracker.stats.thisWeek.formatted(),
+                systemImage: "calendar"
+            )
+            StatTile(
+                label: "This month",
+                value: tracker.stats.thisMonth.formatted(),
+                systemImage: "calendar.circle"
             )
             StatTile(
                 label: "Best day",

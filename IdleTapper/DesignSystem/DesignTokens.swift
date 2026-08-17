@@ -228,7 +228,13 @@ enum DesignTokens {
         /// Grown from 560x460 for the card layout: the content now sits inside
         /// a 28pt page margin and a 20pt card margin, so the five stat tiles
         /// have ~96pt less room than they used to at the same window width.
-        static let historyWindowSize = CGSize(width: 660, height: 580)
+        ///
+        /// Grown again 580 → 650 when the summary went to two rows of tiles.
+        /// The day list is the card that yields when the content outgrows the
+        /// window, and it yields badly: measured at 580 it kept its title and
+        /// its border and held no rows at all, so a window with history in it
+        /// looked intact and read as empty.
+        static let historyWindowSize = CGSize(width: 660, height: 650)
 
         /// Smallest useful History window.
         ///
@@ -236,7 +242,12 @@ enum DesignTokens {
         /// not so narrow that the five stat tiles start truncating their
         /// captions. Below this height the chart and the day list fight over
         /// the same space and neither is readable.
-        static let historyWindowMinSize = CGSize(width: 620, height: 480)
+        ///
+        /// Raised 480 → 530 with the second row of tiles, which took 50pt from
+        /// that fight. Kept below the default deliberately: a minimum equal to
+        /// the default cannot be resized, and worse, it makes any later change
+        /// to the size above invisible.
+        static let historyWindowMinSize = CGSize(width: 620, height: 530)
 
         /// Vertical room a window's content must leave clear at the top when it
         /// draws under the title bar, so nothing lands beneath the traffic

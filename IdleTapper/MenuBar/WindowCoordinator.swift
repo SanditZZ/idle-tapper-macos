@@ -193,7 +193,12 @@ final class WindowCoordinator {
         // a frame saved under .4 would reopen it 80pt short with "Restore
         // Defaults" below the bottom edge — the clipped-on-open failure this
         // suffix exists to prevent.
-        window.setFrameAutosaveName("IdleTapper.\(title).5")
+        // And to .6 when the History summary grew to two rows of tiles, taking
+        // that window from 580 to 650. This bump is the half that is easy to
+        // forget and does all the work: the size above only reaches someone who
+        // has never opened History, and everyone else restores their saved 580
+        // frame and still gets the collapsed, empty-looking day list.
+        window.setFrameAutosaveName("IdleTapper.\(title).6")
 
         return window
     }
