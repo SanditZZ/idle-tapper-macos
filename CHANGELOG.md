@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The Settings, History and Achievements windows can now be reached with the app switcher. While one of them is open Idle Tapper appears in ⌘-Tab and in the Dock, so a window you have clicked away from can be brought back the same way as any other app's. Closing the last one returns it to being a menu bar app, with no Dock icon. The popover is not included: it closes as soon as you click away from it
+
 - The History window now shows this week's and this month's totals alongside the existing statistics. Both are calendar periods rather than rolling windows: "this week" is the week you are in, starting on whichever day your region starts its weeks on, and it resets on that day rather than seven days after your last tap. Both count your whole history, so they stay correct whichever range the picker is set to
 - Six more achievements, taking the set from nine to fifteen: Fifty Thousand Club, Marathon Day, Hundred Day Streak, Hundred Days, and two built on your average across active days — Consistent at 100 and Relentless at 500
 - Achievements are now sorted into Bronze, Silver and Gold tiers. The Achievements window is grouped under those headings, each showing how many of its own are unlocked, and an unlocked badge is coloured by its tier so a Gold one is recognisable from the card alone. The banner shown when you unlock one takes its tier's colour too
