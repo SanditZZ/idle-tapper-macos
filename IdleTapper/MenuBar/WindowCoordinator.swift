@@ -22,6 +22,16 @@ final class WindowCoordinator {
     private var settingsWindow: NSWindow?
     private var achievementsWindow: NSWindow?
 
+    /// Windows currently on screen, by identity.
+    ///
+    /// A set rather than a counter: `present(_:)` is called again every time a
+    /// window is re-shown while already open, and a counter would climb on each
+    /// of those and never come back down.
+    private var openWindows: Set<ObjectIdentifier> = []
+
+    /// Holds the close observers for as long as this coordinator lives.
+    private let observers = ObserverBag()
+
     init(
         tracker: TapTracker,
         settings: AppSettings,
@@ -173,6 +183,19 @@ final class WindowCoordinator {
         window.setContentSize(size)
         window.center()
 
+        // Registered here, not in `present(_:)`, because a window is made once
+        // and presented many times — the coordinator keeps and reuses it. Wiring
+        // this to presentation would add a duplicate observer on every reopen.
+        //
+        // The window's identity is captured rather than read back from the
+        // notification, so nothing non-sendable crosses into the handler.
+        let id = ObjectIdentifier(window)
+        observers.observe(NSWindow.willCloseNotification, object: window) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.windowWillClose(id)
+            }
+        }
+
         // The trailing number discards previously saved frames. Bump it when a
         // window's content grows enough that the old remembered size is no
         // longer a sensible place to reopen at — clamping to the minimum would
@@ -204,8 +227,40 @@ final class WindowCoordinator {
     }
 
     private func present(_ window: NSWindow) {
+        openWindows.insert(ObjectIdentifier(window))
+        // Before activating, not after: becoming `.regular` is what puts the
+        // app in the switcher and the Dock, and doing it after the window is
+        // already key makes the window flicker as the app gains a menu bar.
+        applyActivationPolicy()
+
         // Accessory apps are never frontmost until they ask to be.
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+    }
+
+    /// Stop counting a window that is going away, and drop back to an accessory
+    /// app if it was the last one.
+    ///
+    /// Called from `willClose`, which fires while the window is still open and
+    /// still listed — hence removing it here rather than recounting the app's
+    /// windows, which would be off by one every time.
+    private func windowWillClose(_ id: ObjectIdentifier) {
+        openWindows.remove(id)
+        applyActivationPolicy()
+    }
+
+    /// Put the app in the policy its open windows call for.
+    ///
+    /// Idempotent, and deliberately checks before setting: `setActivationPolicy`
+    /// is not free, and calling it with the policy already in force still makes
+    /// the Dock icon jump.
+    private func applyActivationPolicy() {
+        let policy = ActivationPolicyRule.policy(openWindowCount: openWindows.count)
+        guard NSApp.activationPolicy() != policy else { return }
+
+        NSApp.setActivationPolicy(policy)
+        AppLog.app.info(
+            "[App] Activation policy now \(policy == .regular ? "regular" : "accessory", privacy: .public) for \(self.openWindows.count) open window(s)"
+        )
     }
 }
