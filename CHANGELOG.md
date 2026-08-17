@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The History window now shows this week's and this month's totals alongside the existing statistics. Both are calendar periods rather than rolling windows: "this week" is the week you are in, starting on whichever day your region starts its weeks on, and it resets on that day rather than seven days after your last tap. Both count your whole history, so they stay correct whichever range the picker is set to
+
+### Changed
+
+- The History window's statistics now sit in two rows rather than one. Seven of them in a single row left each one too narrow to read at the window's smallest size
+
 ## [0.5.1] — 2026-08-14
 
 ### Fixed

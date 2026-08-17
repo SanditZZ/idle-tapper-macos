@@ -37,6 +37,8 @@ enum StatsCalculator {
 
         return TapStats(
             today: today,
+            thisWeek: total(from: snapshots, in: .weekOfYear, containing: now, calendar: calendar),
+            thisMonth: total(from: snapshots, in: .month, containing: now, calendar: calendar),
             allTime: allTime,
             bestDay: best?.tapCount ?? 0,
             bestDayDate: best?.dayStart,
@@ -47,6 +49,49 @@ enum StatsCalculator {
                 ? 0
                 : Double(allTime) / Double(active.count)
         )
+    }
+
+    // MARK: - Calendar Periods
+
+    /// Total taps across the calendar period of `component` containing `now`.
+    ///
+    /// `Calendar.dateInterval(of:for:)` decides the boundaries, which is the
+    /// whole point: a week begins on whichever day `calendar.firstWeekday`
+    /// names, and a month is however many days that month actually has. A
+    /// rolling window of seven or thirty days is a *different* statistic that
+    /// merely agrees with this one at the start of a period — computing it that
+    /// way would report a Saturday's taps as part of the following week.
+    ///
+    /// A day counts when its `dayStart` falls inside the interval. That keeps
+    /// the comparison on day boundaries, where both sides were built, rather
+    /// than on elapsed seconds — a daylight saving day is 23 or 25 hours long,
+    /// so any arithmetic in seconds lands a day either side of the truth twice
+    /// a year.
+    ///
+    /// The range is compared **half-open** by hand rather than with
+    /// `DateInterval.contains(_:)`, which is `start...end` *inclusive of the
+    /// end instant*. A period's `end` is the very instant its successor begins —
+    /// midnight on the 1st of the next month, midnight on the next week's first
+    /// day — and that instant is exactly the `dayStart` of a real recorded day.
+    /// Using `contains` therefore counted the first day of April in March, and
+    /// only on the boundary, which is the one case a casual test would miss.
+    ///
+    /// - Returns: Zero when the calendar cannot form the interval, which it
+    ///   only fails to do for dates outside the calendar's own range.
+    static func total(
+        from snapshots: [DaySnapshot],
+        in component: Calendar.Component,
+        containing now: Date,
+        calendar: Calendar = .current
+    ) -> Int {
+        guard let interval = calendar.dateInterval(of: component, for: now) else {
+            AppLog.tap.error("[StatsCalculator] No \(String(describing: component), privacy: .public) interval for the given date")
+            return 0
+        }
+
+        return snapshots
+            .filter { $0.dayStart >= interval.start && $0.dayStart < interval.end }
+            .reduce(0) { $0 + $1.tapCount }
     }
 
     // MARK: - Streaks

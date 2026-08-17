@@ -53,6 +53,17 @@ struct TapStats: Equatable, Sendable {
     /// Taps so far today.
     let today: Int
 
+    /// Taps so far in the calendar week containing "now".
+    ///
+    /// A calendar week, not a rolling seven days. Which day the week starts on
+    /// is `Calendar.firstWeekday`, so this follows the user's region: on a
+    /// Sunday it reads as the day's own total for anyone whose week starts on
+    /// Sunday, and as a full week's total for anyone whose week starts on Monday.
+    let thisWeek: Int
+
+    /// Taps so far in the calendar month containing "now".
+    let thisMonth: Int
+
     /// Taps across every recorded day.
     let allTime: Int
 
@@ -79,6 +90,8 @@ struct TapStats: Equatable, Sendable {
     /// The zero value, used before any data has loaded.
     static let empty = TapStats(
         today: 0,
+        thisWeek: 0,
+        thisMonth: 0,
         allTime: 0,
         bestDay: 0,
         bestDayDate: nil,
