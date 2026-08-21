@@ -30,6 +30,9 @@ enum AppLog {
     /// User settings and preferences.
     static let settings = Logger(subsystem: subsystem, category: "Settings")
 
+    /// Daily goal: progress, celebration and reminder scheduling.
+    static let goal = Logger(subsystem: subsystem, category: "Goal")
+
     /// Sparkle update checks, downloads and installs.
     static let updates = Logger(subsystem: subsystem, category: "Updates")
 }

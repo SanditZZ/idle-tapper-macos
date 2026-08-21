@@ -23,6 +23,14 @@ final class AppEnvironment {
     let launchAtLogin: LaunchAtLoginService
     let updates: UpdateService
 
+    /// Daily goal celebration and reminder scheduling.
+    ///
+    /// Built here and handed to `TapTracker` rather than constructed inside it,
+    /// so the notification centre is chosen in the composition root like every
+    /// other concrete dependency — and so a test can hand the same tracker a
+    /// scheduler that touches nothing.
+    let goals: GoalTracker
+
     /// Owns the auxiliary windows.
     ///
     /// Held here rather than inside `MenuBarController` because the menu bar is
@@ -80,10 +88,18 @@ final class AppEnvironment {
         self.isEphemeral = ephemeral
         self.launchAtLogin = LaunchAtLoginService()
         self.updates = UpdateService.shared
+
+        let goals = GoalTracker(
+            scheduler: UserNotificationScheduler(),
+            settings: settings
+        )
+        self.goals = goals
+
         self.tracker = TapTracker(
             repository: SwiftDataTapRepository(container: container),
             settings: settings,
-            isEphemeral: ephemeral
+            isEphemeral: ephemeral,
+            goals: goals
         )
 
         self.windows = WindowCoordinator(

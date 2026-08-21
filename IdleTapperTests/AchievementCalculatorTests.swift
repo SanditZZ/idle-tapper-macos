@@ -17,7 +17,8 @@ struct AchievementCalculatorTests {
         bestDay: Int = 0,
         longestStreak: Int = 0,
         activeDays: Int = 0,
-        averagePerActiveDay: Double = 0
+        averagePerActiveDay: Double = 0,
+        bestGoalPercent: Int = 0
     ) -> TapStats {
         TapStats(
             today: 0,
@@ -29,7 +30,8 @@ struct AchievementCalculatorTests {
             currentStreak: 0,
             longestStreak: longestStreak,
             activeDays: activeDays,
-            averagePerActiveDay: averagePerActiveDay
+            averagePerActiveDay: averagePerActiveDay,
+            bestGoalPercent: bestGoalPercent
         )
     }
 

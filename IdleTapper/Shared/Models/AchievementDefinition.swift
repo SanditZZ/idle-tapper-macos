@@ -31,6 +31,9 @@ enum AchievementID: String, CaseIterable, Codable, Sendable {
     case hundredDayStreak
     case hundredActiveDays
     case relentless
+
+    // Added in the daily goal release.
+    case overachiever
 }
 
 /// Difficulty band an achievement sits in.
@@ -70,6 +73,7 @@ enum AchievementRequirement: Sendable {
     case longestStreak(Int)
     case activeDays(Int)
     case averagePerActiveDay(Int)
+    case bestGoalPercent(Int)
 
     /// The figure this requirement reads from `TapStats`.
     func current(in stats: TapStats) -> Int {
@@ -78,6 +82,7 @@ enum AchievementRequirement: Sendable {
         case .bestDay: return stats.bestDay
         case .longestStreak: return stats.longestStreak
         case .activeDays: return stats.activeDays
+        case .bestGoalPercent: return stats.bestGoalPercent
         case .averagePerActiveDay:
             let average = stats.averagePerActiveDay
             // This is the only requirement reading a `Double`, and
@@ -102,7 +107,8 @@ enum AchievementRequirement: Sendable {
              .bestDay(let target),
              .longestStreak(let target),
              .activeDays(let target),
-             .averagePerActiveDay(let target):
+             .averagePerActiveDay(let target),
+             .bestGoalPercent(let target):
             return target
         }
     }
@@ -203,6 +209,18 @@ enum AchievementCatalog {
             systemImage: "calendar",
             tier: .silver,
             requirement: .activeDays(30)
+        ),
+        AchievementDefinition(
+            id: .overachiever,
+            title: "Overachiever",
+            detail: "Finish a day with twice your daily goal.",
+            // `arrow.up.circle.fill` rather than a gauge or a target: the gauge
+            // glyphs that read best here are macOS 15, and the deployment
+            // target is 14, where a missing symbol renders as blank space
+            // rather than as an error.
+            systemImage: "arrow.up.circle.fill",
+            tier: .silver,
+            requirement: .bestGoalPercent(200)
         ),
         AchievementDefinition(
             id: .consistent,

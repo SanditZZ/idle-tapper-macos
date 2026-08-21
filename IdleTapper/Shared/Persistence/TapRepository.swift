@@ -40,8 +40,25 @@ protocol TapRepository: AnyObject {
     ///
     /// Creates the day's record on first use, which is how the daily reset
     /// happens: a fresh day simply has no record yet.
+    ///
+    /// - Parameter goalTarget: The daily goal in effect at the moment of the
+    ///   tap, or `nil` when none is. Stamped onto the day's record so that
+    ///   whether it counted toward the streak is settled then and there, rather
+    ///   than re-derived later from whatever the setting happens to say — see
+    ///   `DayRecord.goalTarget`. A tap only ever lands on today, so this can
+    ///   never rewrite a past day.
     @discardableResult
-    func increment(by amount: Int, at date: Date) throws -> Int
+    func increment(by amount: Int, at date: Date, goalTarget: Int?) throws -> Int
+
+    /// Record `goal` as the target for the day containing `date`.
+    ///
+    /// For when the user edits their goal without tapping: today's verdict
+    /// should follow the change immediately, not wait for the next tap.
+    ///
+    /// Does **not** create a record for a day that has none. A goal edited on a
+    /// day with no taps would otherwise leave a zero-count row behind, and the
+    /// first tap of that day stamps the target anyway.
+    func setGoalTarget(_ goal: Int?, on date: Date) throws
 
     /// Tap total for the day containing `date`. Zero when nothing is recorded.
     func count(on date: Date) throws -> Int
@@ -74,10 +91,21 @@ protocol TapRepository: AnyObject {
 }
 
 extension TapRepository {
+    /// Convenience: increment with no goal in effect.
+    ///
+    /// The overwhelming majority of callers — every test fixture seeding
+    /// history, every backfill — have no goal to record, and spelling `nil` at
+    /// each of them would say nothing. A protocol requirement cannot carry a
+    /// default argument, so it is expressed here instead.
+    @discardableResult
+    func increment(by amount: Int, at date: Date) throws -> Int {
+        try increment(by: amount, at: date, goalTarget: nil)
+    }
+
     /// Convenience: record a single tap now.
     @discardableResult
     func recordTap(at date: Date = Date()) throws -> Int {
-        try increment(by: 1, at: date)
+        try increment(by: 1, at: date, goalTarget: nil)
     }
 
     /// Convenience: today's total.

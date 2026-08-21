@@ -29,16 +29,35 @@ final class DayRecord {
     /// When this record was last incremented.
     var updatedAt: Date
 
+    /// The daily goal in effect on this day, or `nil` when none was set.
+    ///
+    /// Stamped from the user's current setting whenever this day is written to.
+    /// A tap only ever lands on *today*, so a past day's target is frozen the
+    /// moment that day ends — which is the whole point. The streak asks whether
+    /// each day met its goal, and if that question were answered against the
+    /// live setting instead, raising the goal in Settings would silently rewrite
+    /// every day in history and collapse a long streak with one keystroke.
+    ///
+    /// Optional, and not merely defaulted to zero, for two reasons. It is what
+    /// keeps this a *lightweight* SwiftData migration (see
+    /// `ModelContainerFactory.schema`), and it is what distinguishes "recorded
+    /// before goals existed, or with the goal switched off" from "had a goal".
+    /// Those days fall back to counting any tap at all, so nobody's existing
+    /// streak changed the day this shipped.
+    var goalTarget: Int?
+
     init(
         dayStart: Date,
         tapCount: Int = 0,
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
+        goalTarget: Int? = nil
     ) {
         self.dayStart = dayStart
         self.tapCount = tapCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.goalTarget = goalTarget
     }
 }
 
@@ -49,6 +68,6 @@ extension DayRecord {
     /// `ModelContext` and to the main actor, which would make the pure logic
     /// untestable in isolation.
     var snapshot: DaySnapshot {
-        DaySnapshot(dayStart: dayStart, tapCount: tapCount)
+        DaySnapshot(dayStart: dayStart, tapCount: tapCount, goalTarget: goalTarget)
     }
 }

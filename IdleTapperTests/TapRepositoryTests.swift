@@ -208,4 +208,86 @@ struct TapRepositoryTests {
 
         #expect(try repository.unlockedAchievements().map(\.id) == [.firstTap])
     }
+
+    // MARK: - Goal Target
+
+    @Test("A tap stamps the goal in effect onto the day it lands on")
+    func incrementRecordsTheGoal() throws {
+        let repository = try makeRepository()
+        let today = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+
+        try repository.increment(by: 1, at: today, goalTarget: 250)
+
+        #expect(try repository.allDays().first?.goalTarget == 250)
+    }
+
+    @Test("A day tapped with no goal records none, and counts on any tap")
+    func incrementWithoutAGoal() throws {
+        let repository = try makeRepository()
+        let today = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+
+        try repository.increment(by: 1, at: today)
+
+        let day = try #require(repository.allDays().first)
+        #expect(day.goalTarget == nil)
+        #expect(GoalCalculator.metGoal(day))
+    }
+
+    /// The guarantee the whole per-day design exists for. Yesterday was
+    /// recorded against a goal of 100 and met it; raising the goal today must
+    /// not reach back and un-meet it.
+    @Test("Changing the goal today does not touch a day already recorded")
+    func pastDaysKeepTheirRecordedGoal() throws {
+        let repository = try makeRepository()
+        let yesterday = TestSupport.date(2026, 3, 14, 10, 0, calendar: calendar)
+        let today = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+
+        try repository.increment(by: 120, at: yesterday, goalTarget: 100)
+        try repository.increment(by: 10, at: today, goalTarget: 500)
+        try repository.setGoalTarget(500, on: today)
+
+        let days = try repository.allDays()
+        #expect(days.count == 2)
+        #expect(days[0].goalTarget == 100)
+        #expect(days[1].goalTarget == 500)
+        #expect(GoalCalculator.metGoal(days[0]))
+        #expect(!GoalCalculator.metGoal(days[1]))
+    }
+
+    @Test("Setting a goal on an untapped day creates no record for it")
+    func setGoalTargetDoesNotCreateADay() throws {
+        let repository = try makeRepository()
+        let today = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+
+        try repository.setGoalTarget(500, on: today)
+
+        // A goal edited before the day's first tap must not leave an empty day
+        // behind — it would show in History as a zero-count row that the user
+        // never created.
+        #expect(try repository.allDays().isEmpty)
+    }
+
+    @Test("A goal set mid-day reaches today's existing record")
+    func setGoalTargetUpdatesToday() throws {
+        let repository = try makeRepository()
+        let today = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+
+        try repository.increment(by: 5, at: today, goalTarget: 100)
+        try repository.setGoalTarget(500, on: today)
+
+        #expect(try repository.allDays().first?.goalTarget == 500)
+    }
+
+    @Test("A recorded goal survives a save and a fresh read")
+    func goalTargetPersists() throws {
+        let container = try ModelContainerFactory.makeInMemory()
+        let writer = SwiftDataTapRepository(container: container, calendar: calendar)
+        let today = TestSupport.date(2026, 3, 15, 10, 0, calendar: calendar)
+
+        try writer.increment(by: 7, at: today, goalTarget: 300)
+        try writer.flush()
+
+        let reader = SwiftDataTapRepository(container: container, calendar: calendar)
+        #expect(try reader.allDays().first?.goalTarget == 300)
+    }
 }

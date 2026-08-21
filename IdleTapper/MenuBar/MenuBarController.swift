@@ -17,11 +17,16 @@ final class MenuBarController {
     // MARK: - Data
 
     private let tracker: TapTracker
-    private let settings: AppSettings
+    /// Not `private`: `MenuBarController+Placement.swift` reads both, and
+    /// Swift's `private` is file-scoped.
+    let settings: AppSettings
     private let windowCoordinator: WindowCoordinator
 
-    private var statusItem: NSStatusItem?
+    var statusItem: NSStatusItem?
     private var popover: NSPopover?
+
+    /// Retains the notification-activation observer.
+    private let observers = ObserverBag()
 
     /// Monitors clicks outside the popover so it dismisses like a menu.
     private lazy var outsideClickMonitor = EventMonitor(
@@ -75,6 +80,7 @@ final class MenuBarController {
         statusItem = item
         updateStatusItem()
         observeState()
+        observeNotificationActivation()
 
         AppLog.menuBar.info("[MenuBar] Status item installed")
 
@@ -129,6 +135,12 @@ final class MenuBarController {
         NSApp.activate(ignoringOtherApps: true)
 
         startMonitoringOutsideClicks()
+
+        // The goal can only be reached by tapping, and the tap button is in
+        // here — so while this is up, the goal-reached notification would be
+        // telling the user something the burst in front of them already has.
+        tracker.goals?.setPopoverVisible(true)
+
         AppLog.menuBar.debug("[MenuBar] Popover shown")
     }
 
@@ -136,6 +148,7 @@ final class MenuBarController {
         popover?.performClose(nil)
         lastCloseDate = Date()
         stopMonitoringOutsideClicks()
+        tracker.goals?.setPopoverVisible(false)
 
         // Taps are debounced; make sure the session reaches disk once the user
         // is done interacting.
@@ -243,102 +256,23 @@ final class MenuBarController {
         // this the whole menu bar shifts on every extra digit.
         item.length = StatusItemRenderer.statusItemLength(for: style)
 
+        let goal = settings.dailyGoal
+
         button.image = StatusItemRenderer.image(for: style)
-        button.toolTip = StatusItemRenderer.tooltip(for: count)
+        button.toolTip = StatusItemRenderer.tooltip(for: count, goal: goal)
 
         // Attributed rather than plain, so the count renders in a monospaced
         // font. Combined with the renderer's fixed-width padding, this is what
         // stops the item resizing — and the menu bar shifting — on every tap.
-        button.attributedTitle = StatusItemRenderer.attributedTitle(for: count, style: style)
+        button.attributedTitle = StatusItemRenderer.attributedTitle(
+            for: count,
+            style: style,
+            goal: goal
+        )
 
         // Keep the number tight against the icon rather than letting the pair
         // spread across the reserved width.
         button.imageHugsTitle = style.showsIcon && style.showsCount
-    }
-
-    // MARK: - Placement Diagnostics
-
-    /// Report where macOS actually placed the status item.
-    ///
-    /// On a Mac with a notch, a full menu bar leaves no room to the right of
-    /// the camera housing, and macOS positions overflow status items *behind*
-    /// it — on screen, correctly sized, and completely invisible. That looks
-    /// identical to a failed install, so it is worth naming explicitly in the
-    /// log rather than leaving the user to guess.
-    ///
-    /// Placement settles a moment after the item is created, hence the delay.
-    private func checkPlacement() {
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(for: .seconds(1))
-
-            guard
-                let self,
-                let item = self.statusItem,
-                let frame = item.button?.window?.frame,
-                let screen = NSScreen.main
-            else { return }
-
-            AppLog.menuBar.debug(
-                "[MenuBar] Placed at x=\(frame.origin.x, privacy: .public) width=\(frame.width, privacy: .public)"
-            )
-
-            let placement = StatusItemPlacement.classify(
-                itemFrame: frame,
-                leftArea: screen.auxiliaryTopLeftArea,
-                rightArea: screen.auxiliaryTopRightArea,
-                screenFrame: screen.frame
-            )
-
-            guard placement == .behindNotch else { return }
-
-            AppLog.menuBar.warning(
-                """
-                [MenuBar] The status item was placed behind the display notch and \
-                cannot be seen. The menu bar has no room left.
-                """
-            )
-
-            // The log alone is not enough: an accessory app with an invisible
-            // icon has no other way to tell the user anything at all.
-            self.presentHiddenIconNoticeIfNeeded()
-        }
-    }
-
-    /// Explain the hidden icon once, unless the user has asked not to be told
-    /// again. Deliberately not shown on every launch.
-    private func presentHiddenIconNoticeIfNeeded() {
-        guard !settings.suppressHiddenIconNotice else {
-            AppLog.menuBar.debug("[MenuBar] Hidden-icon notice suppressed by the user")
-            return
-        }
-
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = "Idle Tapper is hidden behind the notch"
-        alert.informativeText = """
-            Idle Tapper is running, but your menu bar is full, so macOS placed its \
-            icon behind the camera housing where it cannot be clicked.
-
-            To reach it, quit or hide one of your other menu bar items. Choosing \
-            “Icon only” below also makes Idle Tapper take up less space.
-            """
-
-        alert.addButton(withTitle: "Use Icon Only")
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Don’t Show Again")
-
-        NSApp.activate(ignoringOtherApps: true)
-
-        switch alert.runModal() {
-        case .alertFirstButtonReturn:
-            settings.menuBarDisplayStyle = .iconOnly
-            AppLog.menuBar.info("[MenuBar] Switched to icon-only from the hidden-icon notice")
-        case .alertThirdButtonReturn:
-            settings.suppressHiddenIconNotice = true
-            AppLog.menuBar.info("[MenuBar] User suppressed the hidden-icon notice")
-        default:
-            break
-        }
     }
 
     // MARK: - Observation
@@ -351,11 +285,33 @@ final class MenuBarController {
         withObservationTracking {
             _ = tracker.todayCount
             _ = settings.menuBarDisplayStyle
+            // The goal is read by `goalProgress` and by every style's tooltip,
+            // so editing it in Settings has to redraw the item immediately.
+            _ = settings.dailyGoal
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
                 self.updateStatusItem()
                 self.observeState()
+            }
+        }
+    }
+
+    // MARK: - Notification Activation
+
+    /// Open the popover when the user clicks one of our notifications.
+    ///
+    /// The reminder exists to get someone back to the counter, so dropping them
+    /// at a menu bar icon they still have to find and click would be half a
+    /// job. `showPopover` refreshes first, which matters here more than
+    /// anywhere: the notification may have been sitting in Notification Centre
+    /// since before a day rollover.
+    private func observeNotificationActivation() {
+        observers.observe(.idleTapperNotificationActivated) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let button = self.statusItem?.button else { return }
+                guard self.popover?.isShown != true else { return }
+                self.showPopover(from: button)
             }
         }
     }
