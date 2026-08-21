@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A daily tap goal. Set a target in Settings → General and the popover draws it as a ring around the counter, filling as the day goes on and turning green the moment you reach it — with the same burst of colour a milestone gets. It is off by default
+- A "Goal progress" option for the menu bar, showing how far through today's goal you are as a percentage instead of a count. It keeps the same fixed width as every other style, so nothing in your menu bar moves
+- An optional reminder when your streak is at risk: a notification at an hour you choose, on a day that has not met its goal yet and has a streak on the line. It is withdrawn the moment you reach the goal, so it can only ever arrive while it is still true. Clicking it opens the popover
+- A new Silver achievement, Overachiever, for finishing a day with twice your daily goal
+
+### Changed
+
+- **While a daily goal is set, a day counts toward your streak once it reaches that goal rather than on any tap at all.** Days already recorded are unaffected: each day keeps the goal that was in effect when you tapped it, so changing your target in Settings only ever applies from today onwards, and every day recorded before this version — or with the goal switched off — still counts on a single tap. Nobody's existing streak changed
+- Week Streak, Month Streak and Hundred Day Streak therefore become goal achievements for anyone who sets a goal, without changing what they say or taking back one already earned
+- Exported JSON now carries each day's goal alongside its count, for days that had one
+
 ## [0.6.0] — 2026-08-18
 
 ### Added
