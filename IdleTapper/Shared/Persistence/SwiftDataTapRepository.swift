@@ -70,7 +70,7 @@ final class SwiftDataTapRepository: TapRepository {
     // MARK: - Actions: Writes
 
     @discardableResult
-    func increment(by amount: Int, at date: Date) throws -> Int {
+    func increment(by amount: Int, at date: Date, goalTarget: Int?) throws -> Int {
         guard amount != 0 else { return try count(on: date) }
 
         let record = try recordForToday(containing: date, createIfMissing: true)
@@ -82,10 +82,28 @@ final class SwiftDataTapRepository: TapRepository {
 
         record.tapCount += amount
         record.updatedAt = date
+        // Written on every increment rather than only at creation, so a goal
+        // changed part-way through the day takes effect on the next tap. Only
+        // ever today's record: `recordForToday` resolves the day containing
+        // `date`, and a tap is always now.
+        record.goalTarget = goalTarget
         hasUnsavedChanges = true
         scheduleSave()
 
         return record.tapCount
+    }
+
+    func setGoalTarget(_ goal: Int?, on date: Date) throws {
+        // Deliberately does not create the record — see the protocol.
+        guard let record = try recordForToday(containing: date, createIfMissing: false) else {
+            return
+        }
+        guard record.goalTarget != goal else { return }
+
+        record.goalTarget = goal
+        record.updatedAt = date
+        hasUnsavedChanges = true
+        scheduleSave()
     }
 
     func deleteAll() throws {

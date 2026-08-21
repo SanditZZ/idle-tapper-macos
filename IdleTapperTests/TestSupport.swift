@@ -78,11 +78,13 @@ enum TestSupport {
         daysAgo: Int,
         count: Int,
         from reference: Date,
-        calendar: Calendar
+        calendar: Calendar,
+        goalTarget: Int? = nil
     ) -> DaySnapshot {
         DaySnapshot(
             dayStart: DayBoundary.dayStart(daysAgo: daysAgo, from: reference, calendar: calendar),
-            tapCount: count
+            tapCount: count,
+            goalTarget: goalTarget
         )
     }
 
@@ -91,10 +93,20 @@ enum TestSupport {
     ///
     /// Week and month boundaries are easier to read — and to check by eye
     /// against a calendar — as "7 March" than as "four days ago".
-    static func snapshot(on day: Date, count: Int, calendar: Calendar) -> DaySnapshot {
+    ///
+    /// `goalTarget` defaults to `nil`, meaning no goal was in effect that day —
+    /// which is what every day recorded before goals shipped looks like, and
+    /// therefore the case the existing streak fixtures are asserting.
+    static func snapshot(
+        on day: Date,
+        count: Int,
+        calendar: Calendar,
+        goalTarget: Int? = nil
+    ) -> DaySnapshot {
         DaySnapshot(
             dayStart: DayBoundary.dayStart(for: day, calendar: calendar),
-            tapCount: count
+            tapCount: count,
+            goalTarget: goalTarget
         )
     }
 
@@ -154,6 +166,106 @@ enum TestSupport {
             guard let moved = calendar.date(byAdding: .day, value: days, to: now) else { return }
             now = moved
         }
+    }
+
+    // MARK: - Notifications
+
+    /// A `NotificationScheduling` that records what it was asked to do.
+    ///
+    /// Stands in for `UNUserNotificationCenter`, which a test must never reach:
+    /// it is process-wide, backed by the real notification database, and gated
+    /// behind a permission prompt that would be shown to whoever is running the
+    /// suite. Everything `GoalTracker` decides is observable here instead.
+    @MainActor
+    final class FakeNotificationScheduler: NotificationScheduling {
+
+        /// What `authorizationStatus()` reports. Set before exercising the
+        /// tracker to cover the refused and not-yet-asked paths.
+        var authorization: NotificationAuthorization = .authorized
+
+        /// Identifiers already pending before this launch — a reminder left
+        /// behind by a previous run, which the first reconciliation sweeps.
+        var preexisting: Set<String> = []
+
+        /// Requests currently scheduled, keyed by identifier.
+        private(set) var scheduled: [String: PlannedNotification] = [:]
+
+        /// Every request ever added, in order, including replacements.
+        ///
+        /// The count is the point: a thousand taps that do not change the plan
+        /// must not produce a thousand of these.
+        private(set) var added: [PlannedNotification] = []
+
+        private(set) var removed: [String] = []
+        private(set) var authorizationRequests = 0
+
+        /// How many times the authorization state was read.
+        ///
+        /// A proxy for "how many times did the tracker actually go to the
+        /// notification centre", which is the figure the hot-path guarantee is
+        /// about. Counting `added` alone would not catch it: a refused app adds
+        /// nothing however many times it tries.
+        private(set) var statusChecks = 0
+
+        /// When set, `add` throws it, for the scheduling-failure path.
+        var addError: (any Error)?
+
+        func authorizationStatus() async -> NotificationAuthorization {
+            statusChecks += 1
+            return authorization
+        }
+
+        func requestAuthorization() async -> NotificationAuthorization {
+            authorizationRequests += 1
+            if authorization == .notDetermined {
+                authorization = .authorized
+            }
+            return authorization
+        }
+
+        func pendingIdentifiers(withPrefix prefix: String) async -> Set<String> {
+            preexisting.union(scheduled.keys).filter { $0.hasPrefix(prefix) }
+        }
+
+        func add(_ notification: PlannedNotification) async throws {
+            if let addError { throw addError }
+            added.append(notification)
+            scheduled[notification.identifier] = notification
+        }
+
+        func removeIdentifiers(_ identifiers: [String]) {
+            removed.append(contentsOf: identifiers)
+            for identifier in identifiers {
+                scheduled.removeValue(forKey: identifier)
+                preexisting.remove(identifier)
+            }
+        }
+
+        /// Scheduled requests that fire later, ignoring immediate deliveries.
+        var pendingReminders: [PlannedNotification] {
+            scheduled.values.filter { !$0.isImmediate }
+        }
+
+        /// Requests delivered immediately — the goal-reached notifications.
+        var delivered: [PlannedNotification] {
+            added.filter(\.isImmediate)
+        }
+    }
+
+    /// A `GoalTracker` over a fake scheduler.
+    @MainActor
+    static func makeGoalTracker(
+        scheduler: FakeNotificationScheduler,
+        settings: AppSettings,
+        calendar: Calendar = TestSupport.utcCalendar,
+        bannerDuration: Duration = .seconds(4)
+    ) -> GoalTracker {
+        GoalTracker(
+            scheduler: scheduler,
+            settings: settings,
+            calendar: calendar,
+            bannerDuration: bannerDuration
+        )
     }
 
     // MARK: - Tracker

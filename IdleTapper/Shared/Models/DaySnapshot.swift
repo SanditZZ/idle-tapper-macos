@@ -16,11 +16,24 @@ struct DaySnapshot: Equatable, Hashable, Sendable, Codable, Identifiable {
     /// Taps recorded on that day.
     let tapCount: Int
 
+    /// The daily goal that was in effect on that day, or `nil` if none was.
+    ///
+    /// See `DayRecord.goalTarget` for why this is recorded per day rather than
+    /// read from the live setting. Carried across the boundary because the
+    /// streak calculation needs it, and encoded in the JSON export because it
+    /// is user data: a history exported without it could not be read back
+    /// without losing which days counted.
+    let goalTarget: Int?
+
     var id: Date { dayStart }
 
-    init(dayStart: Date, tapCount: Int) {
+    /// - Parameter goalTarget: Defaults to `nil` — "no goal was in effect" —
+    ///   which is both the pre-goals history case and what the great majority
+    ///   of test fixtures want.
+    init(dayStart: Date, tapCount: Int, goalTarget: Int? = nil) {
         self.dayStart = dayStart
         self.tapCount = tapCount
+        self.goalTarget = goalTarget
     }
 }
 
@@ -73,12 +86,17 @@ struct TapStats: Equatable, Sendable {
     /// The day on which `bestDay` was achieved, if any.
     let bestDayDate: Date?
 
-    /// Consecutive days with at least one tap, counting backwards. Today is
-    /// included once it has a tap; an untapped day still in progress does not
-    /// break the streak.
+    /// Consecutive days that met their goal, counting backwards. Today is
+    /// included once it has met its goal; a day still in progress that has not
+    /// met it does not break the streak.
+    ///
+    /// "Met its goal" means the day reached the target recorded against it, or,
+    /// for a day with no goal in effect, that it had any tap at all — see
+    /// `GoalCalculator.metGoal(tapCount:goalTarget:)`. History recorded before
+    /// goals existed therefore streaks exactly as it always did.
     let currentStreak: Int
 
-    /// Longest run of consecutive tapped days ever recorded.
+    /// Longest run of consecutive days meeting their goal ever recorded.
     let longestStreak: Int
 
     /// Number of days that have at least one tap.
@@ -86,6 +104,15 @@ struct TapStats: Equatable, Sendable {
 
     /// Mean taps per active day. Zero when there are no active days.
     let averagePerActiveDay: Double
+
+    /// The highest percentage of a day's own goal ever reached, across days
+    /// that had a goal. Zero when no day has ever had one.
+    ///
+    /// A day of 250 taps against a goal of 100 reads 250. Days with no goal are
+    /// skipped entirely rather than counted as zero, so switching the goal off
+    /// cannot pull this figure down — it is a high-water mark, and an
+    /// achievement built on one is never revoked.
+    let bestGoalPercent: Int
 
     /// The zero value, used before any data has loaded.
     static let empty = TapStats(
@@ -98,6 +125,7 @@ struct TapStats: Equatable, Sendable {
         currentStreak: 0,
         longestStreak: 0,
         activeDays: 0,
-        averagePerActiveDay: 0
+        averagePerActiveDay: 0,
+        bestGoalPercent: 0
     )
 }

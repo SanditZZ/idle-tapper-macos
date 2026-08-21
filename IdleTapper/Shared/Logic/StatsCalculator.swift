@@ -47,7 +47,8 @@ enum StatsCalculator {
             activeDays: active.count,
             averagePerActiveDay: active.isEmpty
                 ? 0
-                : Double(allTime) / Double(active.count)
+                : Double(allTime) / Double(active.count),
+            bestGoalPercent: GoalCalculator.bestGoalPercent(from: snapshots)
         )
     }
 
@@ -96,17 +97,30 @@ enum StatsCalculator {
 
     // MARK: - Streaks
 
-    /// Consecutive days with at least one tap, counting backwards.
+    /// Days that count toward a streak: those that met the goal recorded
+    /// against them.
     ///
-    /// Today is included when it already has a tap. When today has none, the
-    /// streak is measured from yesterday instead — an untapped day in progress
-    /// does not break a streak until it is over.
+    /// The rule itself lives in `GoalCalculator.metGoal(tapCount:goalTarget:)`
+    /// and exists in exactly one place. A day recorded with no goal — every day
+    /// before goals shipped, and every day since with the goal switched off —
+    /// counts on any tap at all, so no existing streak changed when this landed.
+    private static func qualifyingDays(_ snapshots: [DaySnapshot]) -> Set<Date> {
+        Set(snapshots.filter { GoalCalculator.metGoal($0) }.map(\.dayStart))
+    }
+
+    /// Consecutive days that met their goal, counting backwards.
+    ///
+    /// Today is included when it has already met its goal. When it has not, the
+    /// streak is measured from yesterday instead — a day in progress that has
+    /// not got there yet does not break a streak until it is over. That grace
+    /// day is also what makes the streak-at-risk reminder meaningful: the
+    /// number it warns about is exactly what this returns.
     static func currentStreak(
         from snapshots: [DaySnapshot],
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> Int {
-        let activeDays = Set(snapshots.filter { $0.tapCount > 0 }.map(\.dayStart))
+        let activeDays = qualifyingDays(snapshots)
         guard !activeDays.isEmpty else { return 0 }
 
         let todayStart = DayBoundary.dayStart(for: now, calendar: calendar)
@@ -125,12 +139,12 @@ enum StatsCalculator {
         return streak
     }
 
-    /// Longest run of consecutive tapped days anywhere in the history.
+    /// Longest run of consecutive goal-meeting days anywhere in the history.
     static func longestStreak(
         from snapshots: [DaySnapshot],
         calendar: Calendar = .current
     ) -> Int {
-        let days = Set(snapshots.filter { $0.tapCount > 0 }.map(\.dayStart)).sorted()
+        let days = qualifyingDays(snapshots).sorted()
         guard let first = days.first else { return 0 }
 
         var longest = 1

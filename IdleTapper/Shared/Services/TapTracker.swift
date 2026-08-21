@@ -46,7 +46,9 @@ final class TapTracker {
 
     /// Human-readable description of the last failure, or `nil` when healthy.
     /// Surfaced in the UI so a silent persistence failure cannot go unnoticed.
-    private(set) var lastErrorMessage: String?
+    /// Not `private(set)` because `TapTracker+Goal.swift` also reports here —
+    /// see `repository` for why file scope forces that.
+    var lastErrorMessage: String?
 
     /// True when history is held only in memory because the on-disk store could
     /// not be opened.
@@ -64,7 +66,13 @@ final class TapTracker {
     /// See `repository` for why this is not `private` either.
     @ObservationIgnored let calendar: Calendar
 
-    @ObservationIgnored private let now: () -> Date
+    /// See `repository` for why this and `goals` are not `private` either:
+    /// `TapTracker+Goal.swift` reads both.
+    @ObservationIgnored let now: () -> Date
+
+    /// Goal celebration and reminders, or `nil` for neither — which is every
+    /// test not about the goal, and why this is optional.
+    @ObservationIgnored let goals: GoalTracker?
 
     /// Debounce for recomputing derived statistics. Taps update the counter
     /// immediately; the heavier full-history aggregation waits for a pause.
@@ -107,11 +115,12 @@ final class TapTracker {
 
     /// - Parameters:
     ///   - repository: Persistence boundary.
-    ///   - settings: User preferences, used for the history range.
+    ///   - settings: User preferences, used for the history range and the goal.
     ///   - isEphemeral: True when the repository is an in-memory fallback.
     ///   - calendar: Calendar for day boundaries. Injectable for tests.
     ///   - derivedDebounce: Quiet period before recomputing statistics.
     ///   - bannerDuration: How long an unlock/milestone banner stays up.
+    ///   - goals: Goal celebration and reminders, or `nil` for neither.
     ///   - now: Clock, injectable for tests.
     init(
         repository: any TapRepository,
@@ -120,6 +129,7 @@ final class TapTracker {
         calendar: Calendar = .current,
         derivedDebounce: Duration = .milliseconds(400),
         bannerDuration: Duration = .seconds(4),
+        goals: GoalTracker? = nil,
         now: @escaping () -> Date = { Date() }
     ) {
         self.repository = repository
@@ -128,6 +138,7 @@ final class TapTracker {
         self.calendar = calendar
         self.derivedDebounce = derivedDebounce
         self.bannerDuration = bannerDuration
+        self.goals = goals
         self.now = now
 
         refresh()
@@ -152,9 +163,15 @@ final class TapTracker {
         let previousToday = todayCount
 
         do {
-            todayCount = try repository.increment(by: 1, at: tapDate)
+            todayCount = try repository.increment(
+                by: 1,
+                at: tapDate,
+                goalTarget: GoalCalculator.normalized(settings.dailyGoal)
+            )
             lastErrorMessage = nil
             evaluateMilestone(previousToday: previousToday, newToday: todayCount, at: tapDate)
+            goals?.recordTap(previousCount: previousToday, newCount: todayCount, at: tapDate)
+            reconcileGoal(at: tapDate)
             scheduleDerivedRefresh()
         } catch {
             lastErrorMessage = error.localizedDescription
@@ -189,6 +206,7 @@ final class TapTracker {
             )
 
             resetMilestoneTrackingIfNeeded(at: currentDate)
+            reconcileGoal(at: currentDate)
 
             lastErrorMessage = nil
         } catch {
@@ -236,7 +254,7 @@ final class TapTracker {
         }
     }
 
-    // Export lives in `TapTracker+Export.swift`.
+    // Export lives in `TapTracker+Export.swift`, the goal in `TapTracker+Goal.swift`.
 
     // MARK: - Achievements & Milestones
 
