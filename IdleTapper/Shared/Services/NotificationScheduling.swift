@@ -15,7 +15,17 @@
 //
 
 import Foundation
-import UserNotifications
+
+// `@preconcurrency` because `UserNotifications` is not Sendable-audited:
+// `UNNotificationSettings` and `[UNNotificationRequest]` come back from
+// `await`ed calls on a nonisolated singleton and are flagged as non-sendable
+// results, which `SWIFT_TREAT_WARNINGS_AS_ERRORS` turns into a build failure.
+//
+// This is the compiler's own suggested fix and it weakens nothing of ours: it
+// says the framework has not been annotated yet, not that our checking is off.
+// Both values are read and discarded on the main actor inside this file and
+// never escape it. Remove the attribute once the SDK annotates the module.
+@preconcurrency import UserNotifications
 
 /// Whether the app may post notifications.
 ///
