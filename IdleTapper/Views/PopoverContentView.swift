@@ -54,6 +54,10 @@ struct PopoverContentView: View {
                 milestoneBanner(milestone)
             }
 
+            if let goal = tracker.goals?.activeCelebration {
+                goalBanner(goal)
+            }
+
             if let message = tracker.lastErrorMessage {
                 errorBanner(message)
             }
@@ -89,7 +93,7 @@ struct PopoverContentView: View {
     /// the only part of the celebration a screen reader ever hears.
     private var celebratedMilestone: Int? {
         guard settings.showVisualEffects, !reduceMotion else { return nil }
-        return tracker.activeMilestone
+        return tracker.activeMilestone ?? tracker.goals?.activeCelebration
     }
 
     // MARK: - Sections
@@ -111,13 +115,34 @@ struct PopoverContentView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Today's count, inside a progress ring when a goal is set.
+    ///
+    /// `GoalProgressRing` draws nothing of its own when the goal is off, so the
+    /// popover of a user who has never set one is unchanged.
     private var counter: some View {
+        GoalProgressRing(
+            todayCount: tracker.todayCount,
+            goal: settings.dailyGoal,
+            isMet: GoalCalculator.metGoal(
+                tapCount: tracker.todayCount,
+                goalTarget: settings.dailyGoal
+            )
+        ) {
+            counterText
+        }
+    }
+
+    private var counterText: some View {
         Text(tracker.todayCount, format: .number)
             .font(DesignTokens.Typography.counter)
             .monospacedDigit()
             .foregroundStyle(AppColors.textPrimary)
             .contentTransition(.numericText())
             .animation(DesignTokens.Motion.counterChange, value: tracker.todayCount)
+            // Inside the ring the counter has a fixed width to live in, and a
+            // five-figure day would otherwise cross the stroke.
+            .lineLimit(1)
+            .minimumScaleFactor(0.4)
             .accessibilityLabel("Taps today")
             .accessibilityValue("\(tracker.todayCount)")
     }
@@ -231,6 +256,23 @@ struct PopoverContentView: View {
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.small)
                     .fill(AppColors.tint(AppColors.accent))
+            )
+            .accessibilityElement(children: .combine)
+    }
+
+    /// Announces the goal being met. Drawn in the success colour rather than
+    /// the accent, so it is not mistaken for the milestone banner it can appear
+    /// beside — and, like that one, it is not optional: the burst is the part a
+    /// user can switch off, because this is what a screen reader hears.
+    private func goalBanner(_ goal: Int) -> some View {
+        Label("Daily goal reached: \(goal.formatted()) taps", systemImage: "target")
+            .font(DesignTokens.Typography.caption)
+            .foregroundStyle(AppColors.success)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(DesignTokens.Spacing.small)
+            .background(
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.small)
+                    .fill(AppColors.tint(AppColors.success))
             )
             .accessibilityElement(children: .combine)
     }

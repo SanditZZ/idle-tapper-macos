@@ -190,6 +190,37 @@ enum DesignTokens {
         /// Height of the big tap button.
         static let tapButtonHeight: CGFloat = 120
 
+        /// Width of the daily goal's number field in Settings.
+        static let goalFieldWidth: CGFloat = 78
+
+        /// Width of the reminder-hour picker in Settings.
+        ///
+        /// Wide enough for a locale that writes "12:00 AM" rather than "00:00".
+        static let goalHourPickerWidth: CGFloat = 110
+
+        /// Minimum width of one menu bar style preview in the Settings grid.
+        ///
+        /// A fourth style stopped four previews fitting across the Settings
+        /// card, so they wrap. This is the width below which a column is
+        /// dropped rather than squeezed.
+        static let menuBarStyleOptionMinWidth: CGFloat = 120
+
+        /// Outside diameter of the goal progress ring drawn around the counter.
+        ///
+        /// Sized against the popover's 260pt width less its 16pt padding on
+        /// each side, leaving a comfortable margin rather than filling the row.
+        static let goalRingDiameter: CGFloat = 150
+
+        /// Stroke width of the goal progress ring, track and fill alike.
+        static let goalRingThickness: CGFloat = 8
+
+        /// Clearance between the ring's stroke and the counter inside it.
+        ///
+        /// The counter is 44pt and grows with the number of digits, so this is
+        /// what the counter's `minimumScaleFactor` is measured against — a
+        /// five-figure day shrinks to fit rather than crossing the stroke.
+        static let goalRingInset: CGFloat = 18
+
         /// Height of the 7-day sparkline.
         static let sparklineHeight: CGFloat = 36
 

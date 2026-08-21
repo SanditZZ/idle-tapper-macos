@@ -65,6 +65,8 @@ struct GeneralSettingsPage: View {
                 )
             }
 
+            GoalSettingsCard(settings: settings, tracker: tracker)
+
             SettingsCard(
                 title: "Menu bar",
                 subtitle: "Each option shows today's count as it would appear.",
@@ -72,7 +74,8 @@ struct GeneralSettingsPage: View {
             ) {
                 MenuBarStylePicker(
                     selection: $settings.menuBarDisplayStyle,
-                    sampleCount: tracker.todayCount
+                    sampleCount: tracker.todayCount,
+                    sampleGoal: settings.dailyGoal
                 )
             }
 

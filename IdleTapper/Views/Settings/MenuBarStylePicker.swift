@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 /// Selectable previews of the three menu bar styles.
 struct MenuBarStylePicker: View {
@@ -18,12 +19,30 @@ struct MenuBarStylePicker: View {
     /// one, which is what makes it a preview rather than an illustration.
     let sampleCount: Int
 
+    /// Today's goal, for the `goalProgress` preview. Zero when none is set, in
+    /// which case that option previews the count — which is what it would
+    /// actually show.
+    let sampleGoal: Int
+
     var body: some View {
-        HStack(spacing: DesignTokens.Spacing.small) {
+        // Four options no longer fit across a 260pt-wide row of previews, so
+        // they wrap into a grid rather than being squeezed. `adaptive` keeps
+        // two per row at the Settings window's minimum width and lets a wider
+        // window use one row.
+        LazyVGrid(
+            columns: [
+                GridItem(
+                    .adaptive(minimum: DesignTokens.Layout.menuBarStyleOptionMinWidth),
+                    spacing: DesignTokens.Spacing.small
+                )
+            ],
+            spacing: DesignTokens.Spacing.small
+        ) {
             ForEach(MenuBarDisplayStyle.allCases) { style in
                 StyleOption(
                     style: style,
                     sampleCount: sampleCount,
+                    sampleGoal: sampleGoal,
                     isSelected: style == selection,
                     select: { selection = style }
                 )
@@ -38,6 +57,7 @@ private struct StyleOption: View {
 
     let style: MenuBarDisplayStyle
     let sampleCount: Int
+    let sampleGoal: Int
     let isSelected: Bool
     let select: () -> Void
 
@@ -82,6 +102,12 @@ private struct StyleOption: View {
     }
 
     /// Mirrors what `StatusItemRenderer` actually draws for this style.
+    ///
+    /// The title goes through the renderer itself rather than being formatted
+    /// again here, so the preview cannot claim something the menu bar does not
+    /// do — including the `goalProgress` fallback to a plain count when no goal
+    /// is set. Padding is trimmed because a preview is centred rather than
+    /// pinned to a fixed field.
     private var preview: some View {
         HStack(spacing: DesignTokens.Spacing.extraSmall) {
             if style.showsIcon {
@@ -89,8 +115,12 @@ private struct StyleOption: View {
                     .font(.system(size: DesignTokens.Icons.small))
             }
             if style.showsCount {
-                Text(sampleCount.formatted(.number))
-                    .font(DesignTokens.Typography.monospacedDigitsSmall)
+                Text(
+                    StatusItemRenderer
+                        .title(for: sampleCount, style: style, goal: sampleGoal)
+                        .trimmingCharacters(in: .whitespaces)
+                )
+                .font(DesignTokens.Typography.monospacedDigitsSmall)
             }
         }
         .foregroundStyle(AppColors.textPrimary)

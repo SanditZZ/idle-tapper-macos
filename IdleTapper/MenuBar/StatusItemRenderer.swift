@@ -47,12 +47,22 @@ enum StatusItemRenderer {
 
     // MARK: - Title
 
-    /// The padded title for a given count and style.
+    /// The padded title for a given count, style and goal.
     ///
-    /// Always exactly `reservedCharacters` long when the style shows a count,
+    /// Always exactly `reservedCharacters` long when the style shows a title,
     /// so the rendered width is constant. Empty when the style hides it.
-    static func title(for count: Int, style: MenuBarDisplayStyle) -> String {
+    ///
+    /// - Parameter goal: Today's target, or `0` when none is set. Only
+    ///   `goalProgress` reads it, and with no goal that style falls back to the
+    ///   count — a status item reading "0%" for a user who never set a target
+    ///   looks broken rather than empty.
+    static func title(for count: Int, style: MenuBarDisplayStyle, goal: Int = 0) -> String {
         guard style.showsCount else { return "" }
+
+        if style.showsGoalProgress, let target = GoalCalculator.normalized(goal) {
+            return pad(percentage(count, of: target))
+        }
+
         return pad(abbreviated(count))
     }
 
@@ -63,8 +73,12 @@ enum StatusItemRenderer {
     /// occupy the same width. `monospacedDigitSystemFont` is not sufficient
     /// either — it equalises digits but leaves "K", "M" and spaces
     /// proportional.
-    static func attributedTitle(for count: Int, style: MenuBarDisplayStyle) -> NSAttributedString {
-        let text = title(for: count, style: style)
+    static func attributedTitle(
+        for count: Int,
+        style: MenuBarDisplayStyle,
+        goal: Int = 0
+    ) -> NSAttributedString {
+        let text = title(for: count, style: style, goal: goal)
         guard !text.isEmpty else { return NSAttributedString(string: "") }
 
         return NSAttributedString(
@@ -169,12 +183,40 @@ enum StatusItemRenderer {
         }
     }
 
+    /// Progress toward a goal, guaranteed never longer than
+    /// `reservedCharacters`.
+    ///
+    /// "0%" through "999%" — four characters at the widest, which is exactly
+    /// the reserved field, so this style needs no change to the width
+    /// guarantee. Past 999% it saturates to "max" rather than growing a fifth
+    /// character: someone who has done ten times their goal is not waiting on
+    /// the precise figure, and the tooltip carries it anyway.
+    ///
+    /// Not capped at 100%. Overshoot is the interesting part of a goal, and a
+    /// bar that sticks at "100%" for the rest of the day says less than one
+    /// that keeps climbing.
+    static func percentage(_ count: Int, of goal: Int) -> String {
+        let percent = GoalCalculator.percent(tapCount: count, goalTarget: goal)
+        return percent <= 999 ? "\(percent)%" : "max"
+    }
+
     /// Tooltip shown on hover — always the exact number, grouped for legibility.
-    static func tooltip(for count: Int) -> String {
+    ///
+    /// - Parameter goal: Today's target, or `0` for none. When one is set the
+    ///   tooltip is where the exact figures live, since the item itself only
+    ///   has room for a rounded percentage.
+    static func tooltip(for count: Int, goal: Int = 0) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         let exact = formatter.string(from: NSNumber(value: count)) ?? "\(count)"
-        return "\(exact) taps today"
+
+        guard let target = GoalCalculator.normalized(goal) else {
+            return "\(exact) taps today"
+        }
+
+        let targetText = formatter.string(from: NSNumber(value: target)) ?? "\(target)"
+        let percent = GoalCalculator.percent(tapCount: count, goalTarget: target)
+        return "\(exact) of \(targetText) taps today — \(percent)%"
     }
 
     // MARK: - Helpers
