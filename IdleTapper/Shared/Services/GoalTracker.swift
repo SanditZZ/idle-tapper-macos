@@ -171,8 +171,18 @@ final class GoalTracker {
 
         guard !hasApplied || plan != lastPlan else { return }
 
+        // Recorded **synchronously, before enqueuing**, and not inside `apply`.
+        // Applying is asynchronous, so state set in there is not visible to the
+        // next `reconcile` — during a burst of tapping every call would still
+        // see the old value, decide it had work to do, and queue another round
+        // trip. Set here, the second tap of a burst short-circuits on the
+        // comparison and the notification centre is touched once.
+        let isFirstApply = !hasApplied
+        lastPlan = plan
+        hasApplied = true
+
         enqueue { tracker in
-            await tracker.apply(plan)
+            await tracker.apply(plan, isFirstApply: isFirstApply)
         }
     }
 
@@ -252,8 +262,7 @@ final class GoalTracker {
     /// previous run — yesterday's, most often, since its identifier is keyed to
     /// a day that has passed. Later applications only have to undo what this
     /// launch itself scheduled.
-    private func apply(_ plan: PlannedNotification?) async {
-        let isFirstApply = !hasApplied
+    private func apply(_ plan: PlannedNotification?, isFirstApply: Bool) async {
         let authorization = await scheduler.authorizationStatus()
         self.authorization = authorization
 
@@ -272,9 +281,6 @@ final class GoalTracker {
         }
 
         scheduler.removeIdentifiers(stale)
-
-        lastPlan = plan
-        hasApplied = true
 
         // Nothing to schedule, or nowhere to schedule it.
         guard let plan, authorization == .authorized else {
